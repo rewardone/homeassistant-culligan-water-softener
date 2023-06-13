@@ -1,0 +1,13 @@
+{
+    "domain": "culligan_water_softener",
+    "name": "Culligan Water Softener",
+    "documentation": "https://github.com/rewardone/homeassistant-culligan-water-softener",
+    "issue_tracker": "https://github.com/rewardone/homeassistant-culligan-water-softener/issues",
+    "dependencies": [],
+    "codeowners": ["@rewardone"],
+    "requirements": ["culligan~=1.0.0"],
+    "config_flow": true,
+    "iot_class": "cloud_polling",
+    "loggers": ["culligan_water_softener"],
+    "version": "1.0.0"
+  }
