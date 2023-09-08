@@ -5,7 +5,7 @@ from abc import ABC, abstractmethod
 from collections.abc import Iterable
 from typing import Any
 
-from ayla_iot_unofficial import (
+from ayla_iot_unofficial.device import (
     Device,
     Softener
 )
