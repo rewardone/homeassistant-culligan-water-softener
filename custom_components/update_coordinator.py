@@ -9,9 +9,12 @@ from culligan import (
     CulliganApi
 )
 
-from ayla_iot_unofficial import (
+from ayla_iot_unofficial.device import (
     Device,
-    Softener,
+    Softener
+)
+
+from ayla_iot_unofficial import (
     AylaAuthError,
     AylaNotAuthedError,
     AylaAuthExpiringError
