@@ -5,32 +5,19 @@ import asyncio
 from datetime import datetime, timedelta
 
 from async_timeout import timeout
-from culligan import (
-    CulliganApi
-)
+from culligan import CulliganApi
 
-from ayla_iot_unofficial.device import (
-    Device,
-    Softener
-)
+from ayla_iot_unofficial.device import Device, Softener
 
-from ayla_iot_unofficial import (
-    AylaAuthError,
-    AylaNotAuthedError,
-    AylaAuthExpiringError
-)
+from ayla_iot_unofficial import AylaAuthError, AylaNotAuthedError, AylaAuthExpiringError
 
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import ConfigEntryAuthFailed
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
-from .const import (
-    API_TIMEOUT, 
-    DOMAIN, 
-    LOGGER, 
-    UPDATE_INTERVAL
-)
+from .const import API_TIMEOUT, DOMAIN, LOGGER, UPDATE_INTERVAL
+
 
 class CulliganUpdateCoordinator(DataUpdateCoordinator[bool]):
     """Define a wrapper class to update Culligan data."""
@@ -42,7 +29,8 @@ class CulliganUpdateCoordinator(DataUpdateCoordinator[bool]):
         culligan: CulliganApi,
         culligan_devices: list[Softener] | list[Device],
     ) -> None:
-        
+        self.platforms = []
+
         """Set up the CulliganUpdateCoordinator class."""
         self.culligan = culligan
         self.culligan_devices: dict[str, Softener] | dict[str, Device] = {
@@ -73,6 +61,8 @@ class CulliganUpdateCoordinator(DataUpdateCoordinator[bool]):
     async def _async_update_data(self) -> bool:
         """Update data device by device."""
         """CulliganApi has an instance of AylaApi, which is what we really care about updating until Culligan takes ownership"""
+
+        # Check auth and refresh if needed
         try:
             if self.culligan.Ayla.token_expiring_soon:
                 await self.culligan.Ayla.async_refresh_auth()
@@ -81,16 +71,20 @@ class CulliganUpdateCoordinator(DataUpdateCoordinator[bool]):
             ):
                 await self.culligan.Ayla.async_refresh_auth()
 
+            # Check online devices
             all_devices = await self.culligan.Ayla.async_list_devices()
             self._online_dsns = {
                 v["dsn"]
                 for v in all_devices
-                if v["connection_status"] == "Online" and v["dsn"] in self.culligan_devices
+                if v["connection_status"] == "Online"
+                and v["dsn"] in self.culligan_devices
             }
 
             LOGGER.debug("Updating Culligan device data")
             online_devices = (self.culligan_devices[dsn] for dsn in self.online_dsns)
-            await asyncio.gather(*(self._async_update_softener(v) for v in online_devices))
+            await asyncio.gather(
+                *(self._async_update_softener(v) for v in online_devices)
+            )
         except (
             AylaAuthError,
             AylaNotAuthedError,
@@ -99,7 +93,9 @@ class CulliganUpdateCoordinator(DataUpdateCoordinator[bool]):
             LOGGER.debug("Bad auth state.  Attempting re-auth", exc_info=err)
             raise ConfigEntryAuthFailed from err
         except Exception as err:
-            LOGGER.exception("Unexpected error updating Culligan devices.  Attempting re-auth")
+            LOGGER.exception(
+                "Unexpected error updating Culligan devices.  Attempting re-auth"
+            )
             raise UpdateFailed(err) from err
 
         return True

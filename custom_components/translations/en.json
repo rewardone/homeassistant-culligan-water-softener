@@ -1,14 +1,46 @@
 {
-    "config": {
+  "config": {
+      "abort": {
+          "already_configured": "Account is already configured",
+          "cannot_connect": "Failed to connect",
+          "reauth_successful": "Re-authentication was successful",
+          "unknown": "Unexpected error"
+      },
+      "error": {
+          "cannot_connect": "Failed to connect",
+          "invalid_auth": "Invalid authentication",
+          "unknown": "Unexpected error"
+      },
+      "flow_title": "Add Culligan Account",
       "step": {
-        "user": {
-          "data": {
-            "username": "Username",
-            "password": "Password"
+          "reauth": {
+              "data": {
+                  "password": "Password",
+                  "region": "Region",
+                  "username": "Username"
+              }
           },
-          "description": "Enter your Culligan app credentials.",
-          "title": "Setup"
-        }
+          "user": {
+              "data": {
+                  "password": "Password",
+                  "region": "Region",
+                  "username": "Username"
+              },
+              "data_description": {
+                  "region": "Ayla uses different services in the EU.  Select your region to connect to the correct service for your account.",
+                  "username": "Culligan email address."
+              },
+              "description": "Sign into your Culligan account to access your devices.",
+              "title": "Culligan account signin"
+          }
       }
-    }
+  },
+  "selector": {
+      "region": {
+          "options": {
+              "elsewhere": "Everywhere Else",
+              "europe": "Europe"
+          }
+      }
   }
+}
