@@ -1,7 +1,6 @@
 """Culligan Wrapper."""
 from __future__ import annotations
 
-from abc import ABC, abstractmethod
 from collections.abc import Iterable
 from typing import Any
 import voluptuous as vol
@@ -26,15 +25,10 @@ from homeassistant.helpers.entity import DeviceInfo
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
-from .const import DOMAIN, LOGGER, AYLA_REGION_DEFAULT, AYLA_REGION_OPTIONS
+from .const import DOMAIN, LOGGER
 from .update_coordinator import CulliganUpdateCoordinator
 
 from homeassistant.components.sensor import PLATFORM_SCHEMA
-from homeassistant.const import (
-    CONF_PASSWORD,
-    CONF_USERNAME,
-    CONF_REGION,
-)
 
 
 async def async_setup_entry(
@@ -42,7 +36,10 @@ async def async_setup_entry(
     config_entry: ConfigEntry,
     async_add_entities: AddEntitiesCallback,
 ) -> None:
-    """Set up the Culligan coordinator."""
+    """Set up the Culligan sensor."""
+    LOGGER.debug("Sensor async_setup_entry")
+
+    # if the 'options: platform' dict key was not set to a platform, then it is set to domain[config_entry.entry_id] ... see __init__ setup_entry
     coordinator: CulliganUpdateCoordinator = hass.data[DOMAIN][config_entry.entry_id]
     devices: Iterable[Softener] = coordinator.culligan_devices.values()
     device_names = [d.name for d in devices]
@@ -51,6 +48,8 @@ async def async_setup_entry(
         len(device_names),
         ", ".join([d.name for d in devices]),
     )
+
+    # This creates one entity per device
     async_add_entities([CulliganWaterSoftenerEntity(d, coordinator) for d in devices])
 
 
@@ -65,11 +64,15 @@ class CulliganWaterSoftenerEntity(
         self, softener: Softener, coordinator: CulliganUpdateCoordinator
     ) -> None:
         """Create a new SensorEntity"""
+        LOGGER.debug("Class SoftenerEntity init")
+
         super().__init__(coordinator)
         self.softener = softener
         self._attr_name = softener.name
         self._attr_unique_id = softener.serial_number
         self._serial_number = softener.serial_number
+        self._state = None
+        self._available = True
 
     def not_a_function(self, **kwargs: Any) -> None:
         """Placeholder. Not yet implemented."""
@@ -87,11 +90,13 @@ class CulliganWaterSoftenerEntity(
     @property
     def is_online(self) -> bool:
         """Tell us if the device is online."""
-        return self.coordinator.device_is_online(self._serial_number)
+        online = self.coordinator.device_is_online(self._serial_number)
+        self._available = online
+        return online
 
     @property
     def model(self) -> str:
-        """Vacuum model number."""
+        """Softener model number."""
         if self.softener.model_number:
             return self.softener.model_number
         return self.softener.oem_model_number
@@ -125,14 +130,17 @@ class CulliganWaterSoftenerEntity(
     def operating_mode(self) -> str | None:
         """Operating mode."""
         vacation = self.softener.get_property_value("vacation_mode")
+        state = ""
         if vacation == 255:
-            return "Vacation"
+            state = "Vacation"
         else:
             bypass = self.softener.get_property_value("actual_state_dealer_bypass")
             if bypass == 255:
-                return "Bypass"
+                state = "Bypass"
             else:
-                return "Softening"
+                state = "Softening"
+        self._state = state
+        return state
 
     @property
     def state(self) -> str | None:

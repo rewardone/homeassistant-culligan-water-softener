@@ -7,19 +7,21 @@ from collections.abc import Mapping
 from culligan import CulliganApi, CulliganAuthError
 
 from homeassistant import config_entries, core, exceptions
+from homeassistant.config_entries import ConfigEntry, OptionsFlow
 from homeassistant.core import callback
 from homeassistant.const import CONF_PASSWORD, CONF_REGION, CONF_USERNAME
 from homeassistant.data_entry_flow import FlowResult
 from homeassistant.helpers import selector
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 
-from typing import Any, Dict, Optional
+from typing import Any, Optional
+
+from re import compile as recompile
 
 import voluptuous as vol
 
 from .const import (
     API_TIMEOUT,
-    AYLA_REGION_EU,
     AYLA_REGION_DEFAULT,
     AYLA_REGION_OPTIONS,
     CULLIGAN_APP_ID,
@@ -32,7 +34,7 @@ STEP_USER_DATA_SCHEMA = vol.Schema(
     {
         vol.Required(CONF_USERNAME): selector.TextSelector(
             selector.TextSelectorConfig(
-                type=selector.TextSelectorType.EMAIL, autocomplete="username"
+                type=selector.TextSelectorType.EMAIL, autocomplete="email"
             )
         ),
         vol.Required(CONF_PASSWORD): selector.TextSelector(
@@ -59,9 +61,22 @@ class UnknownAuth(exceptions.HomeAssistantError):
     """Error to indicate there is an uncaught auth error."""
 
 
+async def _validate_email(hass: core.HomeAssistant, data: Mapping[str, Any]) -> bool:
+    """Validate the username is an email address"""
+
+    LOGGER.debug("_validate_email")
+    email_regex = "(?:[a-z0-9!#$%&'*+/=?^_`{|}~-]+(?:\\.[a-z0-9!#$%&'*+/=?^_`{|}~-]+)*|\"(?:[\\x01-\\x08\\x0b\\x0c\\x0e-\\x1f\\x21\\x23-\\x5b\\x5d-\\x7f]|\\\\[\\x01-\\x09\\x0b\\x0c\\x0e-\\x7f])*\")@(?:(?:[a-z0-9](?:[a-z0-9-]*[a-z0-9])?\\.)+[a-z0-9](?:[a-z0-9-]*[a-z0-9])?|\\[(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?|[a-z0-9-]*[a-z0-9]:(?:[\\x01-\\x08\\x0b\\x0c\\x0e-\\x1f\\x21-\\x5a\\x53-\\x7f]|\\\\[\\x01-\\x09\\x0b\\x0c\\x0e-\\x7f])+)\\])"
+    compiled = recompile(email_regex)
+    matches = compiled.findall(data[CONF_USERNAME])
+    if not matches:
+        return False
+    else:
+        return True
+
+
 async def _validate_input(
     hass: core.HomeAssistant, data: Mapping[str, Any]
-) -> dict[str, str]:
+) -> None:  # dict[str, str]:
     """Actually test the user input allows us to connect."""
 
     LOGGER.debug("_validate_input")
@@ -71,9 +86,6 @@ async def _validate_input(
         app_id=CULLIGAN_APP_ID,
         websession=async_get_clientsession(hass),
     )
-
-    # Keep this section of error handling even though culligan v1.0.0 signs in SYNCHRONOUSLY upon __init__
-    # Culligan should change ... OPTIONAL sign in on __init__ to play nice with async libraries
 
     try:
         async with async_timeout.timeout(API_TIMEOUT):
@@ -97,9 +109,22 @@ async def _validate_input(
             "An unknown error occurred. Check your region settings and open an issue on Github if the issue persists."
         ) from error
 
-    devices = await culligan.Ayla.async_get_devices()
-    # Return info that you want to store in the config entry.
-    return {"title": data[CONF_USERNAME], "dsn": devices[0]._dsn}
+    if culligan.Ayla is not None:
+        LOGGER.debug("Got Ayla instance, obtaining devices")
+        devices = await culligan.Ayla.async_get_devices()
+
+        # Return info that you want to store in the config entry.
+        info = {
+            "title": "Culligan - %s" % data[CONF_USERNAME],
+            "dsn": devices[0]._dsn,
+            "culligan_api": culligan,
+        }
+        LOGGER.debug(info)
+        return info
+    else:
+        raise UnknownAuth(
+            "An unknown error occurred. Check your region settings and open an issue on Github if the issue persists."
+        )
 
 
 class CulliganFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
@@ -112,7 +137,7 @@ class CulliganFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
 
     LOGGER.debug("In data entry flow")
 
-    def __init__(self):
+    def __init__(self) -> None:
         """Initialize"""
         self._errors = {}
 
@@ -120,38 +145,38 @@ class CulliganFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
         """Show the configuration form to edit location data."""
         return self.async_show_form(
             step_id="user",
-            data_schema=vol.Schema(
-                {vol.Required(CONF_USERNAME): str, vol.Required(CONF_PASSWORD): str}
-            ),
+            data_schema=STEP_USER_DATA_SCHEMA,
             errors=self._errors,
         )
 
     async def async_step_user(
-        self, user_input: Optional[Dict[str, Any]] | None = None
-    ):  # -> FlowResult:
+        self, user_input: Optional[dict[str, Any]] = None
+    ) -> FlowResult:
         """
         Step: User
         User initiates flow via user interface or when discovered and the discovery step is not defined
         """
         LOGGER.debug("async step user")
-        errors: Dict[str, str] = {}
+        self._errors = {}
+
         if user_input is not None:
             LOGGER.debug("Got user input")
-            info, errors = await self._async_validate_input(user_input)
+            # info contains: title, dsn, CulliganAPI
+            info, self._errors = await self._async_validate_input(user_input)
             if info:
+                LOGGER.debug("Got info ... checking unique_id")
                 await self.async_set_unique_id(info["dsn"])
                 self._abort_if_unique_id_configured()
+
+                LOGGER.debug("DSN is unique, creating entry")
                 return self.async_create_entry(
-                    title=f"Culligan - {info['dsn']}", data=self
+                    title="Culligan - %s" % info["dsn"],
+                    data={"user_input": user_input, "instance": info},
                 )
-            else:
-                return await self._show_config_form(user_input)
+
+            return await self._show_config_form(user_input)
 
         return await self._show_config_form(user_input)
-
-        # return self.async_show_form(
-        #     step_id="user", data_schema=STEP_USER_DATA_SCHEMA, errors=errors
-        # )
 
     # async def async_step_reauth(self, user_input: Mapping[str, Any]) -> FlowResult:
     #     """Handle re-auth if login is invalid."""
@@ -184,6 +209,13 @@ class CulliganFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
         errors = {}
         info = None
 
+        # _validate_email will return false if issues and nothing if OK
+        email = await _validate_email(self.hass, user_input)
+        LOGGER.debug(email)
+        if not email:
+            errors["base"] = "must_be_email"
+            return info, errors
+
         # noinspection PyBroadException
         try:
             info = await _validate_input(self.hass, user_input)
@@ -197,28 +229,31 @@ class CulliganFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
 
     @staticmethod
     @callback
-    def async_get_options_flow(config_entry):
+    def async_get_options_flow(config_entry: ConfigEntry) -> OptionsFlow:
         return CulliganOptionsFlowHandler(config_entry)
 
 
 class CulliganOptionsFlowHandler(config_entries.OptionsFlow):
     """Config flow options handler for Culligan."""
 
-    def __init__(self, config_entry):
+    def __init__(self, config_entry) -> None:
         """Initialize HACS options flow."""
         self.config_entry = config_entry
         self.options = dict(config_entry.options)
 
-    async def async_step_init(self, user_input=None):  # pylint: disable=unused-argument
-        """Manage the options."""
+    async def async_step_init(
+        self, user_input=None
+    ) -> FlowResult:  # pylint: disable=unused-argument
+        """Manage the options. First step is always init: https://developers.home-assistant.io/docs/config_entries_options_flow_handler#flow-handler."""
         return await self.async_step_user()
 
-    async def async_step_user(self, user_input=None):
+    async def async_step_user(self, user_input=None) -> FlowResult:
         """Handle a flow initialized by the user."""
         if user_input is not None:
             self.options.update(user_input)
             return await self._update_options()
 
+        # Error here "unsupported schema data type 'platform'"
         return self.async_show_form(
             step_id="user",
             data_schema=vol.Schema(
