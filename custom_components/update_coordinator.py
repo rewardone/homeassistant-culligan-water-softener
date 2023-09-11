@@ -16,7 +16,7 @@ from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import ConfigEntryAuthFailed
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
-from .const import API_TIMEOUT, DOMAIN, LOGGER, UPDATE_INTERVAL
+from .const import API_TIMEOUT, DOMAIN, LOGGER, PLATFORMS, UPDATE_INTERVAL
 
 
 class CulliganUpdateCoordinator(DataUpdateCoordinator[bool]):
@@ -26,53 +26,58 @@ class CulliganUpdateCoordinator(DataUpdateCoordinator[bool]):
         self,
         hass: HomeAssistant,
         config_entry: ConfigEntry,
-        culligan: CulliganApi,
+        culligan_api: CulliganApi,
         culligan_devices: list[Softener] | list[Device],
     ) -> None:
-        self.platforms = []
-
         """Set up the CulliganUpdateCoordinator class."""
-        self.culligan = culligan
+        LOGGER.debug("coordinator init - {config_entry} - {culligan_devices}")
+
+        self.culligan_api = culligan_api
         self.culligan_devices: dict[str, Softener] | dict[str, Device] = {
             softener.serial_number: softener for softener in culligan_devices
         }
         self._config_entry = config_entry
         self._online_dsns: set[str] = set()
+        self.platforms = PLATFORMS
 
         super().__init__(hass, LOGGER, name=DOMAIN, update_interval=UPDATE_INTERVAL)
+        LOGGER.debug("coordinated setup complete")
 
     @property
     def online_dsns(self) -> set[str]:
         """Get the set of all online DSNs."""
+        LOGGER.debug("property set: online_dsns")
         return self._online_dsns
 
     def device_is_online(self, dsn: str) -> bool:
         """Return the online state of a given vacuum dsn."""
+        LOGGER.debug("check: device_is_online")
         return dsn in self._online_dsns
 
     @staticmethod
     async def _async_update_softener(softener: Softener) -> None:
         """Asynchronously update the data for a single vacuum."""
         dsn = softener.serial_number
-        LOGGER.debug("Updating Culligan data for device DSN %s", dsn)
+        LOGGER.debug(
+            "async_update_softener: Updating Culligan data for device DSN %s", dsn
+        )
         async with timeout(API_TIMEOUT):
             await softener.async_update()
 
     async def _async_update_data(self) -> bool:
-        """Update data device by device."""
-        """CulliganApi has an instance of AylaApi, which is what we really care about updating until Culligan takes ownership"""
-
+        """Update data device by device. CulliganApi has an instance of AylaApi, which is what we really care about updating until Culligan takes ownership."""
+        LOGGER.debug("_async_update_data")
         # Check auth and refresh if needed
         try:
-            if self.culligan.Ayla.token_expiring_soon:
-                await self.culligan.Ayla.async_refresh_auth()
-            elif datetime.now() > self.culligan.Ayla.auth_expiration - timedelta(
+            if self.culligan_api.Ayla.token_expiring_soon:
+                await self.culligan_api.Ayla.async_refresh_auth()
+            elif datetime.now() > self.culligan_api.Ayla.auth_expiration - timedelta(
                 seconds=600
             ):
-                await self.culligan.Ayla.async_refresh_auth()
+                await self.culligan_api.Ayla.async_refresh_auth()
 
             # Check online devices
-            all_devices = await self.culligan.Ayla.async_list_devices()
+            all_devices = await self.culligan_api.Ayla.async_list_devices()
             self._online_dsns = {
                 v["dsn"]
                 for v in all_devices
@@ -80,7 +85,7 @@ class CulliganUpdateCoordinator(DataUpdateCoordinator[bool]):
                 and v["dsn"] in self.culligan_devices
             }
 
-            LOGGER.debug("Updating Culligan device data")
+            LOGGER.debug("async_update_data: Updating Culligan device data")
             online_devices = (self.culligan_devices[dsn] for dsn in self.online_dsns)
             await asyncio.gather(
                 *(self._async_update_softener(v) for v in online_devices)
