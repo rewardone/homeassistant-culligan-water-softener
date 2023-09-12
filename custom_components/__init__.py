@@ -127,7 +127,7 @@ async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> b
     # data contains the data property from the config_flow
     #    UI is configured to return:
     #       data.user_info (UI entry data just in case re-auth is needed)
-    #       data.instance (title, dsn[0], culligan_api)
+    #       data.instance (title, devices, dsn[0], culligan_api)
     LOGGER.debug("title %s", config_entry.title)
     LOGGER.debug("data %s", config_entry.data)
     LOGGER.debug("options %s", config_entry.options)
@@ -138,23 +138,29 @@ async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> b
 
     # check existing DOMAIN for data
     if hass.data.get(DOMAIN) is None:
-        LOGGER.debug("No DOMAIN ... setting {DOMAIN}")
+        LOGGER.debug("No DOMAIN ... setting %s", DOMAIN)
         hass.data.setdefault(DOMAIN, {})
         LOGGER.info(STARTUP_MESSAGE)
 
     # if we entered from UI ... a connection check was made and an object exists already
-    # don't recreate
-    if not config_entry.data.instance.culligan_api:
+    # don't recreate ... but also can't serialize culligan_api objects in the config_entry
+    try:
+        culligan_api = config_entry.data["instance"]["culligan_api"]
+    except KeyError:
         LOGGER.debug("Instance was not given ... creating one")
-        culligan_api = CulliganApi(
-            username=config_entry.data[CONF_USERNAME],
-            password=config_entry.data[CONF_PASSWORD],
-            app_id=CULLIGAN_APP_ID,
-            websession=async_get_clientsession(hass),
-        )
+        try:
+            culligan_api = CulliganApi(
+                username=config_entry.data["user_input"][CONF_USERNAME],
+                password=config_entry.data["user_input"][CONF_PASSWORD],
+                app_id=CULLIGAN_APP_ID,
+                websession=async_get_clientsession(hass),
+            )
+        except CannotConnect as exc:
+            raise ConfigEntryNotReady from exc
 
         # connect_or_timeout will set API token and CulliganAPI.Ayla
         try:
+            # if successful, culligan_api.Ayla will be initialized
             if not await async_connect_or_timeout(culligan_api):
                 return False
         except CannotConnect as exc:
@@ -162,6 +168,7 @@ async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> b
 
     LOGGER.debug("Asking for devices")
     culligan_devices = await culligan_api.Ayla.async_get_devices()
+
     device_names = ", ".join(d.name for d in culligan_devices)
     LOGGER.debug("Found %d Culligan device(s): %s", len(culligan_devices), device_names)
     LOGGER.debug(device_names)
@@ -171,31 +178,43 @@ async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> b
         hass, config_entry, culligan_api, culligan_devices
     )
 
-    LOGGER.debug("Calling entry first_refresh")
-    await coordinator.async_config_entry_first_refresh()
+    LOGGER.debug("refreshing coordinator")
+    await coordinator.async_refresh()
 
     if not coordinator.last_update_success:
+        LOGGER.debug("refresh was not successful")
         raise ConfigEntryNotReady
+
+    # tie the coordinator to the domain
+    hass.data[DOMAIN][config_entry.entry_id] = coordinator
+
+    # LOGGER.debug("Calling entry first_refresh")
+    # await coordinator.async_config_entry_first_refresh()
+
+    hass.async_create_task(
+        hass.config_entries.async_forward_entry_setup(config_entry, "sensor")
+    )
 
     # If the config_entry specifies a platform, get and append it
     # otherwise set the entry_id to the coordinator
-    for platform in PLATFORMS:
-        if config_entry.options.get(platform, True):
-            coordinator.platforms.append(platform)
-            hass.async_add_job(
-                hass.config_entries.async_forward_entry_setup(config_entry, platform)
-            )
-        else:
-            hass.data.setdefault(DOMAIN, {})
-            hass.data[DOMAIN][config_entry.entry_id] = coordinator
+    # for platform in PLATFORMS:
+    #     if config_entry.options.get(platform, True):
+    #         LOGGER.debug(
+    #             "Calling async_forward_entry_setup specifically for %s", platform
+    #         )
+    #         coordinator.platforms.append(platform)
+    #         hass.async_create_task(
+    #             hass.config_entries.async_forward_entry_setup(config_entry, platform)
+    #         )
+    #     else:
+    #         hass.data.setdefault(DOMAIN, {})
+    #         hass.data[DOMAIN][config_entry.entry_id] = coordinator
 
-            LOGGER.debug("Calling async_foward_entry_setups")
-            await hass.config_entries.async_forward_entry_setups(
-                config_entry, PLATFORMS
-            )
+    #         LOGGER.debug("ELSE: Calling async_foward_entry_setups")
+    #         await hass.config_entries.async_forward_entry_setup(config_entry, PLATFORMS)
 
     LOGGER.debug(
-        "Last setup_entry ... calling add_update_listener with async_relod_entry"
+        "Last setup_entry ... calling add_update_listener with async_reload_entry"
     )
     config_entry.add_update_listener(async_reload_entry)
 
@@ -211,14 +230,14 @@ async def async_connect_or_timeout(culligan: CulliganApi) -> bool:
             LOGGER.debug("Initialize connection to Ayla networks API")
             await culligan.async_sign_in()
             culligan.Ayla = culligan.get_ayla_api()
+
+            return True
     except CulliganAuthError:
         LOGGER.error("Authentication error connecting to Culligan api")
         return False
     except asyncio.TimeoutError as exc:
         LOGGER.error("Timeout expired")
         raise CannotConnect from exc
-
-    return True
 
 
 async def async_disconnect_or_timeout(coordinator: CulliganUpdateCoordinator):
@@ -228,7 +247,7 @@ async def async_disconnect_or_timeout(coordinator: CulliganUpdateCoordinator):
         with suppress(
             CulliganAuthError, CulliganAuthExpiringError, CulliganNotAuthedError
         ):
-            await coordinator.culligan.async_sign_out()
+            await coordinator.culligan_api.async_sign_out()
 
 
 async def async_update_options(hass: HomeAssistant, config_entry: ConfigEntry):
