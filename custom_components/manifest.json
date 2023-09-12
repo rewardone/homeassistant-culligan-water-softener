@@ -8,5 +8,5 @@
   "iot_class": "cloud_polling",
   "issue_tracker": "https://github.com/rewardone/homeassistant-culligan-water-softener/issues",
   "loggers": ["culligan"],
-  "requirements": ["ayla-iot-unofficial==1.0.4","culligan==1.0.5"]
+  "requirements": ["ayla-iot-unofficial==1.0.5","culligan==1.0.5"]
 }

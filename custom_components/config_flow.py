@@ -116,8 +116,7 @@ async def _validate_input(
         # Return info that you want to store in the config entry.
         info = {
             "title": "Culligan - %s" % data[CONF_USERNAME],
-            "dsn": devices[0]._dsn,
-            "culligan_api": culligan,
+            "dsn": ", ".join(d._dsn for d in devices),
         }
         LOGGER.debug(info)
         return info
