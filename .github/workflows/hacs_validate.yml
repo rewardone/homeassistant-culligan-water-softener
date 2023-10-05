@@ -8,10 +8,12 @@ on:
   workflow_dispatch:
 
 jobs:
-  validate-hacs:
+  hacs:
+    name: HACS Action
     runs-on: "ubuntu-latest"
     steps:
-    - name: HACS Action
-      uses: "hacs/action@main"
-      with:
-        category: "integration"
+      - uses: "actions/checkout@v2"
+      - name: HACS Action
+        uses: "hacs/action@21.12.1"
+        with:
+          category: "integration"
