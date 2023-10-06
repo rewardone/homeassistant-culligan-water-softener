@@ -1,27 +1,30 @@
-"""Culligan Wrapper."""
+"""Culligan Sensor Entities."""
 from __future__ import annotations
 
-from collections.abc import Iterable
-from typing import Any, final
+from .const import DOMAIN, LOGGER
+from .entity import CulliganWaterSoftenerEntity
+from .update_coordinator import CulliganUpdateCoordinator
 
 from ayla_iot_unofficial.device import Device
+from collections.abc import Iterable
 
 from homeassistant.config_entries import ConfigEntry
+from homeassistant.components.sensor import SensorDeviceClass, SensorStateClass
+from homeassistant.const import (
+    FORMAT_DATETIME,
+    SIGNAL_STRENGTH_DECIBELS_MILLIWATT,
+    UnitOfMass,
+    UnitOfTime,
+    UnitOfVolume,
+)
 from homeassistant.core import HomeAssistant
-
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
-
-from .update_coordinator import CulliganUpdateCoordinator
-from .entity import CulliganWaterSoftenerEntity
-
-from .const import ATTRIBUTES, DOMAIN, ICON, LOGGER
 
 
 async def async_setup_entry(
     hass: HomeAssistant,
     config_entry: ConfigEntry,
-    async_add_entities: AddEntitiesCallback,
-    # async_add_devices: AddEntitiesCallback,
+    async_add_devices: AddEntitiesCallback,
 ) -> None:
     """Set up the Culligan sensor."""
     LOGGER.debug("Sensor async_setup_entry")
@@ -35,211 +38,304 @@ async def async_setup_entry(
         ", ".join([d.name for d in devices]),
     )
 
-    # Two primary functions ... async_add_devices OR async_add_entities
-    LOGGER.debug("sensor calling async_add_entities:")
-    sensors = [
-        CulliganWaterSoftenerSensor(coordinator, config_entry, device)
-        for device in devices
+    softener_sensors = [
+        (
+            # total gallons today
+            "total_gallons_today",
+            "total gallons today",
+            "total_gallons_today",
+            UnitOfVolume.GALLONS,
+            "mdi:water-circle",
+            SensorDeviceClass.VOLUME_STORAGE,
+            SensorStateClass.MEASUREMENT,
+        ),
+        (
+            # average daily usage sensor
+            # doesn't match app and not sure why ... longer period?
+            "average_daily_usage",
+            "average daily water usage",
+            "average_daily_usage",
+            UnitOfVolume.GALLONS,
+            "mdi:cup-water",
+            SensorDeviceClass.VOLUME,
+            SensorStateClass.MEASUREMENT,
+        ),
+        (
+            # remaining capacity before regen in gallons
+            "capacity_remaining_gallons",
+            "capacity remaining before regeneration",
+            "capacity_remaining_gallons",
+            UnitOfVolume.GALLONS,
+            "mdi:water-minus",
+            SensorDeviceClass.VOLUME,
+            SensorStateClass.MEASUREMENT,
+        ),
+        (
+            # current flow rate
+            "current_flow_rate",
+            "current flow rate",
+            "current_flow_rate",
+            "gpm",
+            "mdi:waves",
+            SensorDeviceClass.WATER,
+            SensorStateClass.MEASUREMENT,
+        ),
+        (
+            # manual salt level as displayed in the app
+            "manual_salt_level_rem_calc",
+            "manual days of salt remaining",
+            "manual_salt_level_rem_calc",
+            UnitOfTime.DAYS,
+            "mdi:calendar-clock",
+            SensorDeviceClass.DATE,
+            SensorStateClass.MEASUREMENT,
+        ),
+        (
+            # Salt dosage in lbs (storage size)
+            "salt_dosage_in_lbs",
+            "total salt capacity",
+            "salt_dosage_in_lbs",
+            UnitOfMass.POUNDS,
+            "mdi:shaker-outline",
+            SensorDeviceClass.WEIGHT,
+            SensorStateClass.TOTAL,
+        ),
+        (
+            # days since last regeneration
+            "days_since_last_regen",
+            "days since last regeneration",
+            "days_since_last_regen",
+            UnitOfTime.DAYS,
+            "mdi:calendar-refresh",
+            SensorDeviceClass.DATE,
+            SensorStateClass.MEASUREMENT,
+        ),
+        (
+            # exact date of last regeneration
+            "last_regen_date_time",
+            "last regeneration date",
+            "last_regen_date_time",
+            FORMAT_DATETIME,
+            "mdi:calendar-check",
+            SensorDeviceClass.TIMESTAMP,
+            None,
+        ),
+        (
+            # date of next regen
+            "next_regen_on_date",
+            "next regeneration date",
+            "next_regen_on_date",
+            None,  # FORMAT_DATETIME,
+            "mdi:calendar-arrow-right",
+            SensorDeviceClass.DATE,
+            None,
+        ),
+        (
+            # days between regenerations
+            # not applicable if smart sensing
+            "regen_interval_days_setting",
+            "programmed days between regenerations",
+            "regen_interval_days_setting",
+            UnitOfTime.DAYS,
+            "mdi:calendar-refresh",
+            None,  # SensorDeviceClass.TIMESTAMP,
+            SensorStateClass.MEASUREMENT,
+        ),
+        (
+            # smart 'aqua sensor' Zmin
+            "aqua_sensor_Zmin",
+            "Aqua Sensor Threshold",
+            "aqua_sensor_Zmin",
+            "μS/cm",  # micro? Siemens per meter (conductivity)
+            "mdi:water-alert",
+            None,
+            SensorStateClass.TOTAL,
+        ),
+        (
+            # smart 'aqua sensor' Zcurrent
+            "aqua_sensor_Zratio_current",
+            "Aqua Sensor",
+            "aqua_sensor_Zratio_current",
+            "μS/cm",  # micro? Siemens per meter (conductivity)
+            "mdi:water-opacity",
+            None,
+            SensorStateClass.MEASUREMENT,
+        ),
+        (
+            # average number of days between regens
+            "avg_no_of_days_btwn_reg",
+            "average days between regenerations",
+            "avg_no_of_days_btwn_reg",
+            UnitOfTime.DAYS,
+            "mdi:calendar",
+            None,  # SensorDeviceClass.TIMESTAMP,
+            SensorStateClass.MEASUREMENT,
+        ),
+        (
+            # hardness programmed in grains
+            "hardness_in_grains_per_gal",
+            "programmed water hardness",
+            "hardness_in_grains_per_gal",
+            "gpg",
+            "mdi:water-percent",
+            None,
+            SensorStateClass.TOTAL,
+        ),
+        (
+            # Wifi strength
+            "rssi",
+            "WiFi strength",
+            "rssi",
+            SIGNAL_STRENGTH_DECIBELS_MILLIWATT,
+            "mdi:wifi-arrow-up-down",
+            SensorDeviceClass.SIGNAL_STRENGTH,
+            SensorStateClass.MEASUREMENT,
+        ),
+        (
+            # time remaining in valve position
+            "time_rem_in_position",
+            "valve position time remaining",
+            "time_rem_in_position",
+            None,  # FORMAT_DATETIME,
+            "mdi:clock-end",
+            None,  # SensorDeviceClass.TIMESTAMP,
+            SensorStateClass.MEASUREMENT,
+        ),
+        (
+            # Total gallons softened since install
+            "total_gallons_since_install",
+            "total gallons softened since install",
+            "total_gallons_since_install",
+            UnitOfVolume.GALLONS,
+            "mdi:cup-water",
+            SensorDeviceClass.VOLUME_STORAGE,
+            SensorStateClass.TOTAL_INCREASING,
+        ),
+        (
+            # Total regenerations since install
+            "total_regens_since_install",
+            "total regenerations since install",
+            "total_regens_since_install",
+            None,
+            "mdi:refresh-circle",
+            None,
+            SensorStateClass.TOTAL_INCREASING,
+        ),
+        (
+            # Error codes
+            "error_flags",
+            "Error codes",
+            "error_flags",
+            None,
+            "mdi:alert-circle",
+            None,
+            None,
+        )
+        # (
+        #     # id
+        #     # description
+        #     # key
+        #     # unit (of measurement)
+        #     # icon
+        #     # device_class
+        #     # state_class
+        # ),
     ]
-    async_add_entities(sensors)
-    LOGGER.debug("Finished sensor async_add_entities")
+
+    # Method two ... create individual sensors from a map of defined sensor attributes
+    for device in devices:
+        LOGGER.debug("Working on device: %s", device._device_serial_number)
+        sensors = []
+        for sensor in softener_sensors:
+            LOGGER.debug("sensor calling async_add: %s", sensor[0])
+            sensors += [
+                SoftenerSensor(
+                    coordinator,
+                    config_entry,
+                    device,
+                    sensor[0],
+                    sensor[1],
+                    sensor[2],
+                    sensor[3],
+                    sensor[4],
+                    sensor[5],
+                    sensor[6],
+                )
+            ]
+
+        # add devices will add a new device (with area selection)
+        async_add_devices(sensors)
+
+        # add entities also did the same, but the entity names were correct
+        # async_add_entities(sensors)
+        LOGGER.debug("Finished sensor async_add_devices")
 
 
-class CulliganWaterSoftenerSensor(CulliganWaterSoftenerEntity):
-    """Culligan Water Softener Sensor Class"""
+class SoftenerSensor(CulliganWaterSoftenerEntity):
+    """Generic sensor template for water softener"""
 
-    # Sensor should have name, state, icon, device class
-    # Sensor is a subclass of softener entity, who's init should have a device)
+    _attr_has_entity_name = True
+    _attr_name = None
+    _attr_should_poll = False
 
-    @final
-    @property
-    def state_attributes(self) -> dict[str, Any]:
-        """Return state attributes."""
-        data: dict[str, Any] = {}
+    def __init__(
+        self,
+        coordinator: CulliganUpdateCoordinator,
+        config_entry: ConfigEntry,
+        device: Device,
+        sensor_id: str,
+        description: str,
+        key: str,
+        unit_of_measurement: str | None,
+        icon: str,
+        device_class: SensorDeviceClass,
+        state_class: SensorStateClass | None,
+    ) -> None:
+        """Initialize the sensor."""
+        # Entity defines properties: info, name, state
+        super().__init__(coordinator, config_entry, device)
 
-        for prop, attr in ATTRIBUTES.items():
-            if (value := getattr(self, prop)) is not None:
-                LOGGER.debug("Attributes: setting %s to %s", attr, value)
-                data[attr] = value
-            else:
-                LOGGER.debug("Attributes: %s is None", attr)
+        self._attr_device_class = device_class
+        self._attr_native_unit_of_measurement = unit_of_measurement
+        self._attr_state_class = state_class
+        self._attr_sensor_id = sensor_id
+        self._attr_unique_id = device._device_serial_number + "_" + sensor_id
 
-        return data
-
-    @property
-    def available(self) -> bool:
-        """Determine if the sensor is available based on API results."""
-        # If the last update was successful...
-        return self.coordinator.last_update_success and self.is_online
-
-    @property
-    def average_daily_usage(self) -> int | None:
-        """Return the avgerage_daily_usage or None"""
-        return self.device.get_property_value("average_daily_usage")
-
-    @property
-    def capacity_remaining_gal(self) -> int | None:
-        """Return the remaining gallon capacity before regen (or None)."""
-        return self.device.get_property_value("capacity_remaining_gallons")
-
-    @property
-    def current_flow_rate(self) -> int | None:
-        """Return the current flow rate (or None)."""
-        return self.device.get_property_value("current_flow_rate")
-
-    @property
-    def days_salt_remaining(self) -> int | None:
-        """Return the estimated number of days of salt remaining (or None)."""
-        return self.device.get_property_value("days_salt_remaining")
-
-    @property
-    def days_since_last_regen(self) -> int | None:
-        """Return the days since last regen (or None)."""
-        return self.device.get_property_value("days_since_last_regen")
-
-    @property
-    def device_class(self) -> str | None:
-        """Return the device class of the sensor"""
-        return "water_softener"
-
-    @property
-    def error_code(self) -> int | None:
-        """Return the last observed error code (or None)."""
-        return self.device.get_property_value("error_flags")
+        self._attr_description = description
+        self._attr_sensor_key = key
+        self._attr_icon = icon
 
     @property
-    def error_message(self) -> str | None:
-        """Return the last observed error message (or None)."""
-        if not self.error_code:
-            return None
-        return self.device.error_text
+    def state(self) -> int | None:
+        """Using devices stored property map, get the value from the dictionary"""
+        return self.device.get_property_value(self._attr_sensor_key)
+
+    @property
+    def unit_of_measurement(self) -> str | None:
+        """Define unit of measurement"""
+        return self._attr_native_unit_of_measurement
 
     @property
     def icon(self) -> str | None:
-        """Return the icon of the sensor."""
-        return ICON
+        """Define the icon"""
+        return self._attr_icon
 
     @property
-    def is_online(self) -> bool | None:
-        """Tell us if the device is online."""
-        online = self.coordinator.device_is_online(self.device._device_serial_number)
-        return online
+    def device_class(self) -> SensorDeviceClass | None:
+        """Define the device class"""
+        return self._attr_device_class
 
     @property
-    def last_regen_date(self) -> str | None:
-        """Return the last regen date (or None)."""
-        return self.device.get_property_value("last_regen_date_time")
+    def name(self) -> str | None:
+        """Define name as description"""
+        return f"{self._attr_description}"
 
     @property
-    def manual_salt_level_rem_calc(self) -> int | None:
-        """Return the salt level based on manual additions (or None)."""
-        return self.device.get_property_value("manual_salt_level_rem_calc")
+    def id(self) -> str | None:
+        """Define name as the sensors ID"""
+        return f"{self._attr_sensor_id}"
 
     @property
-    def model(self) -> str | None:
-        """Softener model number."""
-        if self.device._device_model_number:
-            return self.device._device_model_number
-        return self.device._oem_model_number
-
-    @property
-    def next_regen_on_date(self) -> str | None:
-        """Return the last regen date (or None)."""
-        return self.device.get_property_value("next_regen_on_date")
-
-    @property
-    def operating_mode(self) -> str | None:
-        """Operating mode."""
-        vacation = self.device.get_property_value("vacation_mode")
-        state = ""
-        if vacation == 1 or vacation == 255:
-            state = "Vacation"
-        else:
-            bypass = self.device.get_property_value("actual_state_dealer_bypass")
-            if bypass == 1 or vacation == 255:
-                state = "Bypass"
-            else:
-                state = "Softening"
-        return state
-
-    @property
-    def regen_interval_days(self) -> int | None:
-        """Return the regen interval days (or None). Maybe this doesn't count for smart softeners"""
-        return self.device.get_property_value("regen_interval_days_setting")
-
-    @property
-    def regen_tonight_pending(self) -> str | None:
-        """Return if there is a regen pending tonight (or None)."""
-        return self.device.get_property_value("regen_tonight_pending")
-
-    @property
-    def rssi(self) -> int | None:
-        """Get the WiFi RSSI."""
-        return self.device.get_property_value("rssi")
-
-    @property
-    def salt_level_low(self) -> str | None:
-        """Return the if the salt level is low warning (or None)."""
-        return self.device.get_property_value("sbt_salt_level_low")
-
-    @property
-    def state(self) -> str | None:
-        """Get the current softener state."""
-        # alternative to look into? self.coordinator.data.get("body")
-        return self.operating_mode
-
-    @property
-    def time_rem_in_position(self) -> str | None:
-        """Return the time remaining on a timed bypass (or None)."""
-        return self.device.get_property_value("time_rem_in_position")
-
-    @property
-    def total_gallons_today(self) -> int | None:
-        """Return the total softened gallons today (or None)."""
-        return self.device.get_property_value("total_gallons_today")
-
-    @property
-    def total_gallons_since_install(self) -> int | None:
-        """Return the total gallons since install (or None)."""
-        return self.device.get_property_value("total_gallons_since_install")
-
-    @property
-    def total_regens_since_install(self) -> int | None:
-        """Return the total regens since install (or None)."""
-        return self.device.get_property_value("total_regens_since_install")
-
-    @property
-    def valve_position(self) -> str | None:
-        """Return the valve position (or None)."""
-        if self.device.get_property_value("valve_position") == 0:
-            return "Open"
-        else:
-            return "Closed"
-
-    @property
-    def water_hardness(self) -> int | None:
-        """Return the water hardness in grain per gallon (typically set by the installer) (or None)."""
-        return self.device.get_property_value("hardness_in_grains_per_gal")
-
-    async def async_start_vacation_mode(self, **kwargs: Any) -> None:
-        """Set the softener to turn on vacation mode"""
-        await self.device.async_start_vacation_mode()
-        await self.coordinator.async_refresh()
-
-    async def async_stop_vacation_mode(self, **kwargs: Any) -> None:
-        """Set the softener to turn off vacation mode"""
-        await self.device.async_stop_vacation_mode()
-        await self.coordinator.async_refresh()
-
-    def not_a_function(self, **kwargs: Any) -> None:
-        """Placeholder. Not yet implemented."""
-        raise NotImplementedError()
-
-    def send_command(
-        self,
-        command: str,
-        params: dict[str, Any] | list[Any] | None = None,
-        **kwargs: Any,
-    ) -> None:
-        """Send a command to the softener. Not yet implemented."""
-        raise NotImplementedError()
+    def unique_id(self) -> str | None:
+        """Define unique ID as DSN + ID"""
+        return f"{self._attr_unique_id}"

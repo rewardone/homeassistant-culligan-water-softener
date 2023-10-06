@@ -27,19 +27,15 @@ class CulliganWaterSoftenerEntity(CoordinatorEntity):
         # assume that the device is a softener
         self.device = device
 
-        LOGGER.debug("Entity init: %s - %s", self.device, self.device._name)
-
-    # Entity to contain at minimum: unique_id, device_info, state_attributes
-    @property
-    def unique_id(self):
-        """Return a unique ID to use for this entity"""
-        return self._config_entry.entry_id
+        LOGGER.debug(
+            "Entity init: %s - %s", self.device._name, self.device._device_serial_number
+        )
 
     @property
     def device_info(self) -> DeviceInfo:
         """Device info dictionary."""
         return DeviceInfo(
-            identifiers={(DOMAIN, self.unique_id)},
+            identifiers={(DOMAIN, self.device._device_serial_number)},
             name=self.device._name,
             manufacturer="Culligan",
             model=self.device._device_model_number,
