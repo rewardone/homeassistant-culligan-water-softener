@@ -1,8 +1,20 @@
 """Culligan Integration."""
+from .const import (
+    API_TIMEOUT,
+    CULLIGAN_APP_ID,
+    DOMAIN,
+    LOGGER,
+    PLATFORMS,
+    STARTUP_MESSAGE,
+    UPDATE_INTERVAL,
+)
+from .update_coordinator import CulliganUpdateCoordinator
+
 import asyncio
+import async_timeout
+
 from contextlib import suppress
 
-import async_timeout
 from culligan import (
     CulliganApi,
     CulliganAuthError,
@@ -13,110 +25,14 @@ from culligan import (
 from homeassistant.exceptions import ConfigEntryNotReady, HomeAssistantError
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
-from homeassistant.const import CONF_PASSWORD, CONF_REGION, CONF_USERNAME
+from homeassistant.const import CONF_PASSWORD, CONF_USERNAME
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
-from homeassistant.helpers.typing import ConfigType
-import voluptuous as vol
-import homeassistant.helpers.config_validation as cv
-from homeassistant.helpers import selector
-
-from .const import (
-    API_TIMEOUT,
-    AYLA_REGION_EU,
-    AYLA_REGION_DEFAULT,
-    AYLA_REGION_OPTIONS,
-    CULLIGAN_APP_ID,
-    DOMAIN,
-    NAME,
-    LOGGER,
-    PLATFORMS,
-    STARTUP_MESSAGE,
-    UPDATE_INTERVAL,
-)
-from .update_coordinator import CulliganUpdateCoordinator
 
 SCAN_INTERVAL = UPDATE_INTERVAL
 
 
 class CannotConnect(HomeAssistantError):
     """Error to indicate we cannot connect."""
-
-
-# CONFIG_SCHEMA = vol.Schema(
-#     {
-#         vol.Required(CONF_USERNAME): cv.matches_regex(
-#             "\A[\w!#$%&'*+\/=?`{|}~^-]+(?:\.[\w!#$%&'*+\/=?`{|}~^-]+)*@(?:[a-zA-Z0-9-]+\.)+[a-zA-Z]{2,6}\Z"
-#         ),
-#         vol.Required(CONF_PASSWORD): cv.string,
-#         vol.Required(CONF_REGION, default=AYLA_REGION_DEFAULT): selector.SelectSelector(
-#             selector.SelectSelectorConfig(
-#                 options=AYLA_REGION_OPTIONS, translation_key="region"
-#             ),
-#         ),
-#     }
-# )
-
-
-# async def async_setup(hass: HomeAssistant, config_entry: ConfigType) -> bool:
-#     """Initialize the Culligan platform via manual configuration.yml entry ... but also from config_flow?"""
-#     LOGGER.debug("async_setup from")
-#     LOGGER.debug(config_entry)
-
-#     if CONF_REGION not in config_entry["culligan"]:
-#         LOGGER.error(
-#             "Culligan required value: 'region' not specified. Try one of: %s",
-#             AYLA_REGION_OPTIONS,
-#         )
-#         raise ConfigEntryNotReady
-
-#     LOGGER.debug("instantiating CulliganAPI")
-#     culligan = CulliganApi(
-#         username=config_entry["culligan"][CONF_USERNAME],
-#         password=config_entry["culligan"][CONF_PASSWORD],
-#         app_id=CULLIGAN_APP_ID,
-#         websession=async_get_clientsession(hass),
-#     )
-
-#     try:
-#         if not await async_connect_or_timeout(culligan):
-#             return False
-#     except CannotConnect as exc:
-#         raise ConfigEntryNotReady from exc
-
-#     LOGGER.debug("Obtaining device list")
-#     culligan_devices = await culligan.Ayla.async_get_devices()
-
-#     device_names = ", ".join(d.name for d in culligan_devices)
-#     LOGGER.debug("Found %d Culligan device(s): %s", len(culligan_devices), device_names)
-
-#     coordinator = CulliganUpdateCoordinator(
-#         hass, config_entry, culligan, culligan_devices
-#     )
-
-#     # let the coordinator update the data
-#     LOGGER.debug("Calling coordinator to update")
-#     await coordinator.async_config_entry_first_refresh()
-
-#     if not coordinator.last_update_success:
-#         raise ConfigEntryNotReady
-
-#     for platform in PLATFORMS:
-#         if config_entry.options.get(platform, True):
-#             coordinator.platforms.append(platform)
-#             hass.async_add_job(
-#                 hass.config_entries.async_forward_entry_setup(config_entry, platform)
-#             )
-#         else:
-#             hass.data.setdefault(DOMAIN, {})
-#             hass.data[DOMAIN][config_entry.entry_id] = coordinator
-
-#             await hass.config_entries.async_forward_entry_setups(
-#                 config_entry, PLATFORMS
-#             )
-
-#     config_entry.add_update_listener(async_reload_entry)
-
-#     return True
 
 
 async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> bool:
@@ -188,12 +104,10 @@ async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> b
     # tie the coordinator to the domain
     hass.data[DOMAIN][config_entry.entry_id] = coordinator
 
-    # LOGGER.debug("Calling entry first_refresh")
-    # await coordinator.async_config_entry_first_refresh()
-
-    hass.async_create_task(
-        hass.config_entries.async_forward_entry_setup(config_entry, "sensor")
-    )
+    for platform in PLATFORMS:
+        hass.async_create_task(
+            hass.config_entries.async_forward_entry_setup(config_entry, platform)
+        )
 
     # If the config_entry specifies a platform, get and append it
     # otherwise set the entry_id to the coordinator

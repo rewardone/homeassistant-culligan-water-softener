@@ -1,22 +1,20 @@
 """Data update coordinator for Culligan devices."""
 from __future__ import annotations
+from .const import API_TIMEOUT, DOMAIN, LOGGER, PLATFORMS, UPDATE_INTERVAL
 
 import asyncio
-from datetime import datetime, timedelta
-
 from async_timeout import timeout
+
 from culligan import CulliganApi
-
 from ayla_iot_unofficial.device import Device, Softener
-
 from ayla_iot_unofficial import AylaAuthError, AylaNotAuthedError, AylaAuthExpiringError
+
+from datetime import datetime, timedelta
 
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import ConfigEntryAuthFailed
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
-
-from .const import API_TIMEOUT, DOMAIN, LOGGER, PLATFORMS, UPDATE_INTERVAL
 
 
 class CulliganUpdateCoordinator(DataUpdateCoordinator[bool]):
@@ -62,15 +60,32 @@ class CulliganUpdateCoordinator(DataUpdateCoordinator[bool]):
             "async_update_softener: Updating Culligan data for device DSN %s", dsn
         )
 
+        # Softeners need to send a wifi_report to trigger up-to-date information
         async with timeout(API_TIMEOUT):
             try:
-                LOGGER.debug("starting async_update")
-                return await softener.async_update()
+                LOGGER.debug("sending batch_datapoints")
+                poll = await softener.async_send_poll()
             except Exception as err:
                 LOGGER.exception(
                     "Unexpected error updating Culligan devices.  Attempting re-auth"
                 )
                 raise UpdateFailed(err) from err
+
+        # if the poll was successful, update internal property state
+        if poll:
+            async with timeout(API_TIMEOUT):
+                try:
+                    LOGGER.debug("starting async_update")
+                    return await softener.async_update()
+                except Exception as err:
+                    LOGGER.exception(
+                        "Unexpected error updating Culligan devices.  Attempting re-auth"
+                    )
+                    raise UpdateFailed(err) from err
+        else:
+            LOGGER.debug(
+                "batch_datapoint send failure, properties will not be accurate"
+            )
 
     async def _async_update_data(self) -> bool:
         """Loop through online DSNs and call update_softener. CulliganApi has an instance of AylaApi, which is what we really care about updating until Culligan takes ownership."""
