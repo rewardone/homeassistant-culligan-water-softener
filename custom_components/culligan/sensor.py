@@ -40,6 +40,16 @@ async def async_setup_entry(
 
     softener_sensors = [
         (
+            # generic softener status
+            "status",
+            "status",
+            "status",
+            None,
+            "mdi:water",
+            None,
+            None,
+        ),
+        (
             # total gallons today
             "total_gallons_today",
             "total gallons today",
@@ -144,7 +154,7 @@ async def async_setup_entry(
         (
             # smart 'aqua sensor' Zmin
             "aqua_sensor_Zmin",
-            "Aqua Sensor Threshold",
+            "aqua Sensor Threshold",
             "aqua_sensor_Zmin",
             "μS/cm",  # micro? Siemens per meter (conductivity)
             "mdi:water-alert",
@@ -154,7 +164,7 @@ async def async_setup_entry(
         (
             # smart 'aqua sensor' Zcurrent
             "aqua_sensor_Zratio_current",
-            "Aqua Sensor",
+            "aqua Sensor",
             "aqua_sensor_Zratio_current",
             "μS/cm",  # micro? Siemens per meter (conductivity)
             "mdi:water-opacity",
@@ -224,7 +234,7 @@ async def async_setup_entry(
         (
             # Error codes
             "error_flags",
-            "Error codes",
+            "error codes",
             "error_flags",
             None,
             "mdi:alert-circle",
@@ -253,21 +263,20 @@ async def async_setup_entry(
                     coordinator,
                     config_entry,
                     device,
-                    sensor[0],
-                    sensor[1],
-                    sensor[2],
-                    sensor[3],
-                    sensor[4],
-                    sensor[5],
-                    sensor[6],
+                    sensor[0],  # id
+                    sensor[1],  # description
+                    sensor[2],  # key
+                    sensor[3],  # unit of measurement
+                    sensor[4],  # icon
+                    sensor[5],  # device class
+                    sensor[6],  # state class
                 )
             ]
 
         # add devices will add a new device (with area selection)
-        async_add_devices(sensors)
+        if len(sensors) > 0:
+            async_add_devices(sensors)
 
-        # add entities also did the same, but the entity names were correct
-        # async_add_entities(sensors)
         LOGGER.debug("Finished sensor async_add_devices")
 
 
@@ -308,7 +317,22 @@ class SoftenerSensor(CulliganWaterSoftenerEntity):
     @property
     def state(self) -> int | None:
         """Using devices stored property map, get the value from the dictionary"""
-        return self.device.get_property_value(self._attr_sensor_key)
+
+        if self._attr_sensor_key == "status":
+            vacation = self.device.get_property_value("vacation_mode")
+            bypass = self.device.get_property_value("actual_state_dealer_bypass")
+            if vacation == 1 or vacation == 255:
+                state = "Vacation"
+                self._attr_icon = "mdi:plain"
+            elif bypass == 1:
+                state = "Bypass"
+                self._attr_icon = "mdi:water-off"
+            else:
+                state = "Softening"
+                self._attr_icon = "mdi:water"
+            return state
+        else:
+            return self.device.get_property_value(self._attr_sensor_key)
 
     @property
     def unit_of_measurement(self) -> str | None:
@@ -334,8 +358,3 @@ class SoftenerSensor(CulliganWaterSoftenerEntity):
     def id(self) -> str | None:
         """Define name as the sensors ID"""
         return f"{self._attr_sensor_id}"
-
-    @property
-    def unique_id(self) -> str | None:
-        """Define unique ID as DSN + ID"""
-        return f"{self._attr_unique_id}"

@@ -1,6 +1,6 @@
 """Data update coordinator for Culligan devices."""
 from __future__ import annotations
-from .const import API_TIMEOUT, DOMAIN, LOGGER, PLATFORMS, UPDATE_INTERVAL
+from .const import API_TIMEOUT, DOMAIN, LOGGER, PLATFORMS
 
 import asyncio
 from async_timeout import timeout
@@ -35,10 +35,18 @@ class CulliganUpdateCoordinator(DataUpdateCoordinator[bool]):
             softener.serial_number: softener for softener in culligan_devices
         }
         self._config_entry = config_entry
+        self._hass = hass
         self._online_dsns: set[str] = set()
         self.platforms = PLATFORMS
 
-        super().__init__(hass, LOGGER, name=DOMAIN, update_interval=UPDATE_INTERVAL)
+        update_interval = config_entry.data["user_input"]["update_interval"]
+
+        super().__init__(
+            hass,
+            LOGGER,
+            name=DOMAIN,
+            update_interval=timedelta(seconds=update_interval),
+        )
         LOGGER.debug("coordinator setup complete")
 
     @property
@@ -90,6 +98,25 @@ class CulliganUpdateCoordinator(DataUpdateCoordinator[bool]):
     async def _async_update_data(self) -> bool:
         """Loop through online DSNs and call update_softener. CulliganApi has an instance of AylaApi, which is what we really care about updating until Culligan takes ownership."""
         LOGGER.debug("_async_update_data")
+
+        # If configuration options have changed ... update them now:
+        config_entry = self.hass.config_entries.async_get_entry(
+            self._config_entry.entry_id
+        )
+        # LOGGER.debug("Config entry data: %s", config_entry.data)
+        # LOGGER.debug("Config entry options: %s", config_entry.options)
+        if "update_interval" in config_entry.options.keys():
+            if self.update_interval != timedelta(
+                seconds=config_entry.options["update_interval"]
+            ):
+                LOGGER.debug(
+                    "Updating update-interval to: %i",
+                    config_entry.options["update_interval"],
+                )
+                self.update_interval = timedelta(
+                    seconds=config_entry.options["update_interval"]
+                )
+
         # Check auth and refresh if needed
         try:
             LOGGER.debug("checking auth token expiry")
@@ -121,6 +148,7 @@ class CulliganUpdateCoordinator(DataUpdateCoordinator[bool]):
         }
         LOGGER.debug("Online devices: %d", len(self._online_dsns))
 
+        # Update all online devices
         LOGGER.debug("async_update_data: Updating Culligan device data")
         online_devices = (self.culligan_devices[dsn] for dsn in self._online_dsns)
         try:
