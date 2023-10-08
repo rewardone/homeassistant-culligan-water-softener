@@ -13,6 +13,7 @@ from homeassistant.const import CONF_PASSWORD, CONF_REGION, CONF_USERNAME
 from homeassistant.data_entry_flow import FlowResult
 from homeassistant.helpers import selector
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
+import homeassistant.helpers.config_validation as cv
 
 from typing import Any, Optional
 
@@ -27,7 +28,6 @@ from .const import (
     CULLIGAN_APP_ID,
     DOMAIN,
     LOGGER,
-    PLATFORMS,
 )
 
 STEP_USER_DATA_SCHEMA = vol.Schema(
@@ -45,6 +45,7 @@ STEP_USER_DATA_SCHEMA = vol.Schema(
                 options=AYLA_REGION_OPTIONS, translation_key="region"
             ),
         ),
+        vol.Optional("update_interval", default=30): cv.positive_int,
     }
 )
 
@@ -61,7 +62,7 @@ class UnknownAuth(exceptions.HomeAssistantError):
     """Error to indicate there is an uncaught auth error."""
 
 
-async def _validate_email(hass: core.HomeAssistant, data: Mapping[str, Any]) -> bool:
+async def validate_email(hass: core.HomeAssistant, data: Mapping[str, Any]) -> bool:
     """Validate the username is an email address"""
 
     LOGGER.debug("_validate_email")
@@ -74,7 +75,7 @@ async def _validate_email(hass: core.HomeAssistant, data: Mapping[str, Any]) -> 
         return True
 
 
-async def _validate_input(
+async def validate_input(
     hass: core.HomeAssistant, data: Mapping[str, Any]
 ) -> None:  # dict[str, str]:
     """Actually test the user input allows us to connect."""
@@ -126,9 +127,34 @@ async def _validate_input(
         )
 
 
+async def async_validate_input(
+    hass: core.HomeAssistant, user_input: Mapping[str, Any]
+) -> tuple[dict[str, str] | None, dict[str, str]]:
+    """Validate form input using email andd input validator functions."""
+    LOGGER.debug("_async_validate_input")
+    errors = {}
+    info = None
+
+    # _validate_email will return false if issues and nothing if OK
+    email = await validate_email(hass, user_input)
+    LOGGER.debug(email)
+    if not email:
+        errors["base"] = "must_be_email"
+        return info, errors
+
+    # noinspection PyBroadException
+    try:
+        info = await validate_input(hass, user_input)
+    except CannotConnect:
+        errors["base"] = "cannot_connect"
+    except InvalidAuth:
+        errors["base"] = "invalid_auth"
+    except UnknownAuth:
+        errors["base"] = "unknown"
+    return info, errors
+
+
 class CulliganFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
-    # @config_entries.HANDLERS.register(DOMAIN)
-    # class CulliganWaterSoftenerConfigFlow(data_entry_flow.FlowHandler):
     """Handle config flow(s) for Culligan"""
 
     VERSION = 1
@@ -149,19 +175,20 @@ class CulliganFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
         )
 
     async def async_step_user(
-        self, user_input: Optional[dict[str, Any]] = None
+        self, user_input: Optional[dict[str, Any]] | None = None
     ) -> FlowResult:
         """
         Step: User
         User initiates flow via user interface or when discovered and the discovery step is not defined
         """
+
         LOGGER.debug("async step user")
         self._errors = {}
 
         if user_input is not None:
             LOGGER.debug("Got user input")
             # info contains: title, dsn, CulliganAPI
-            info, self._errors = await self._async_validate_input(user_input)
+            info, self._errors = await async_validate_input(self.hass, user_input)
             if info:
                 LOGGER.debug("Got info ... checking unique_id")
                 await self.async_set_unique_id(info["dsn"])
@@ -170,11 +197,16 @@ class CulliganFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
                 LOGGER.debug("DSN is unique, creating entry")
                 return self.async_create_entry(
                     title="Culligan - %s" % info["dsn"],
-                    data={"user_input": user_input, "instance": info},
+                    data={
+                        "user_input": user_input,
+                        "instance": info,
+                    },
                 )
 
+            LOGGER.debug("user input, but failed validation ... showing config form")
             return await self._show_config_form(user_input)
 
+        LOGGER.debug("no user input ... showing config form")
         return await self._show_config_form(user_input)
 
     # async def async_step_reauth(self, user_input: Mapping[str, Any]) -> FlowResult:
@@ -200,71 +232,66 @@ class CulliganFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
     #         errors=errors,
     #     )
 
-    async def _async_validate_input(
-        self, user_input: Mapping[str, Any]
-    ) -> tuple[dict[str, str] | None, dict[str, str]]:
-        """Validate form input."""
-        LOGGER.debug("_async_validate_input")
-        errors = {}
-        info = None
-
-        # _validate_email will return false if issues and nothing if OK
-        email = await _validate_email(self.hass, user_input)
-        LOGGER.debug(email)
-        if not email:
-            errors["base"] = "must_be_email"
-            return info, errors
-
-        # noinspection PyBroadException
-        try:
-            info = await _validate_input(self.hass, user_input)
-        except CannotConnect:
-            errors["base"] = "cannot_connect"
-        except InvalidAuth:
-            errors["base"] = "invalid_auth"
-        except UnknownAuth:
-            errors["base"] = "unknown"
-        return info, errors
-
     @staticmethod
     @callback
     def async_get_options_flow(config_entry: ConfigEntry) -> OptionsFlow:
+        """Get/Enable options flow for this handler"""
         return CulliganOptionsFlowHandler(config_entry)
 
 
 class CulliganOptionsFlowHandler(config_entries.OptionsFlow):
-    """Config flow options handler for Culligan."""
+    """Options flow handler for Culligan."""
 
-    def __init__(self, config_entry) -> None:
-        """Initialize HACS options flow."""
+    def __init__(self, config_entry: config_entries.ConfigEntry) -> None:
+        """Initialize the options flow."""
         self.config_entry = config_entry
-        self.options = dict(config_entry.options)
+
+    async def _show_options_form(self, user_input):  # pylint: disable=unused-argument
+        """Show the options form to edit location and update interval. Step is always 'init'"""
+
+        STEP_OPTION_DATA_SCHEMA = vol.Schema(
+            {
+                vol.Optional(
+                    "update_interval",
+                    default=self.config_entry.data["user_input"]["update_interval"],
+                ): cv.positive_int
+            }
+        )
+
+        return self.async_show_form(
+            step_id="init",
+            data_schema=STEP_OPTION_DATA_SCHEMA,
+            errors=self._errors,
+        )
 
     async def async_step_init(
-        self, user_input=None
+        self, user_input: Optional[dict[str, Any]] | None = None
     ) -> FlowResult:  # pylint: disable=unused-argument
         """Manage the options. First step is always init: https://developers.home-assistant.io/docs/config_entries_options_flow_handler#flow-handler."""
-        return await self.async_step_user()
 
-    async def async_step_user(self, user_input=None) -> FlowResult:
-        """Handle a flow initialized by the user."""
+        LOGGER.debug("async set (options) init")
+        self._errors = {}
+
         if user_input is not None:
-            self.options.update(user_input)
-            return await self._update_options()
+            LOGGER.debug("Options flow user_input: %s", user_input)
+            # value of data will be set on the options property of our config_entry
 
-        # Error here "unsupported schema data type 'platform'"
-        return self.async_show_form(
-            step_id="user",
-            data_schema=vol.Schema(
-                {
-                    vol.Required(x, default=self.options.get(x, True)): bool
-                    for x in sorted(PLATFORMS)
-                }
-            ),
-        )
+            # thanks to: https://community.home-assistant.io/t/config-flow-how-to-update-an-existing-entity/522442/7
 
-    async def _update_options(self):
-        """Update config entry options."""
-        return self.async_create_entry(
-            title=self.config_entry.data.get(CONF_USERNAME), data=self.options
-        )
+            # We technically don't want to re-create the entity, just update the entity
+            # return self.async_create_entry(
+            #     title="Some options",
+            #     data={
+            #         "user_input": user_input,
+            #     },
+            # )
+
+            # update the config entry instead of re-creating
+            self.hass.config_entries.async_update_entry(
+                self.config_entry, options=user_input
+            )
+
+            # return a blank config entry so the listener in __init__ can reload the integration
+            return self.async_create_entry(title=None, data=None)
+
+        return await self._show_options_form(user_input)

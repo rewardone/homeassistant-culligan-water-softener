@@ -6,7 +6,6 @@ from .const import (
     LOGGER,
     PLATFORMS,
     STARTUP_MESSAGE,
-    UPDATE_INTERVAL,
 )
 from .update_coordinator import CulliganUpdateCoordinator
 
@@ -27,8 +26,6 @@ from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.const import CONF_PASSWORD, CONF_USERNAME
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
-
-SCAN_INTERVAL = UPDATE_INTERVAL
 
 
 class CannotConnect(HomeAssistantError):
@@ -101,36 +98,20 @@ async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> b
         LOGGER.debug("refresh was not successful")
         raise ConfigEntryNotReady
 
-    # tie the coordinator to the domain
+    LOGGER.debug("calling add_update_listener(s)")
+
     hass.data[DOMAIN][config_entry.entry_id] = coordinator
 
+    LOGGER.debug("Calling forward_entry_setup")
     for platform in PLATFORMS:
         hass.async_create_task(
             hass.config_entries.async_forward_entry_setup(config_entry, platform)
         )
 
-    # If the config_entry specifies a platform, get and append it
-    # otherwise set the entry_id to the coordinator
-    # for platform in PLATFORMS:
-    #     if config_entry.options.get(platform, True):
-    #         LOGGER.debug(
-    #             "Calling async_forward_entry_setup specifically for %s", platform
-    #         )
-    #         coordinator.platforms.append(platform)
-    #         hass.async_create_task(
-    #             hass.config_entries.async_forward_entry_setup(config_entry, platform)
-    #         )
-    #     else:
-    #         hass.data.setdefault(DOMAIN, {})
-    #         hass.data[DOMAIN][config_entry.entry_id] = coordinator
-
-    #         LOGGER.debug("ELSE: Calling async_foward_entry_setups")
-    #         await hass.config_entries.async_forward_entry_setup(config_entry, PLATFORMS)
-
-    LOGGER.debug(
-        "Last setup_entry ... calling add_update_listener with async_reload_entry"
-    )
-    config_entry.add_update_listener(async_reload_entry)
+    # HA docs signal updates
+    config_entry.async_on_unload(config_entry.add_update_listener(async_update_options))
+    # config_entry.add_update_listener(async_update_options)
+    # config_entry.add_update_listener(async_reload_entry)
 
     LOGGER.debug("If we made it this far ... TRUE that setup is complete")
     return True
@@ -162,48 +143,45 @@ async def async_disconnect_or_timeout(coordinator: CulliganUpdateCoordinator):
             CulliganAuthError, CulliganAuthExpiringError, CulliganNotAuthedError
         ):
             await coordinator.culligan_api.async_sign_out()
+            return True
 
 
 async def async_update_options(hass: HomeAssistant, config_entry: ConfigEntry):
-    """Update options."""
+    """Update options function for options flow events"""
     LOGGER.debug("async_update_options")
+    # Reload the integration to re-instance the coordinator with a new update_interval / options
+    # hass.config_entries.async_update_entry(
+    #     config_entry, options=dict(config_entry.options)
+    # )
+    # await async_reload_entry(hass, config_entry)
     await hass.config_entries.async_reload(config_entry.entry_id)
 
 
 async def async_unload_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> bool:
     """Unload a config entry."""
     LOGGER.debug("async_unload_entry")
-    coordinator = hass.data[DOMAIN][config_entry.entry_id]
+
     unloaded = all(
         await asyncio.gather(
             *[
                 hass.config_entries.async_forward_entry_unload(config_entry, platform)
                 for platform in PLATFORMS
-                if platform in coordinator.platforms
             ]
         )
     )
+
+    coordinator = hass.data[DOMAIN][config_entry.entry_id]
+
+    await async_disconnect_or_timeout(coordinator)
+
     if unloaded:
-        domain_data = hass.data[DOMAIN][config_entry.entry_id]
-        with suppress(CulliganAuthError):
-            await async_disconnect_or_timeout(coordinator=domain_data)
         hass.data[DOMAIN].pop(config_entry.entry_id)
 
-    # unload_ok = await hass.config_entries.async_unload_platforms(
-    #     config_entry, PLATFORMS
-    # )
-    # if unload_ok:
-    #     domain_data = hass.data[DOMAIN][config_entry.entry_id]
-    #     with suppress(CulliganAuthError):
-    #         await async_disconnect_or_timeout(coordinator=domain_data)
-    #     hass.data[DOMAIN].pop(config_entry.entry_id)
-
-    # return unload_ok
     return unloaded
 
 
 async def async_reload_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> None:
     """Reload config entry."""
     LOGGER.debug("async_reload_entry")
-    await async_unload_entry(hass, config_entry)
-    await async_setup_entry(hass, config_entry)
+
+    await hass.config_entries.async_reload(config_entry.entry_id)

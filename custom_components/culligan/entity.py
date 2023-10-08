@@ -1,5 +1,5 @@
 """CulliganEntity class"""
-from .const import DOMAIN, LOGGER
+from .const import DOMAIN
 from .update_coordinator import CulliganUpdateCoordinator
 from ayla_iot_unofficial.device import Device
 from homeassistant.config_entries import ConfigEntry
@@ -19,17 +19,15 @@ class CulliganWaterSoftenerEntity(CoordinatorEntity):
         device: Device,
     ) -> None:
         """Create a new SensorEntity"""
-        LOGGER.debug("Class SoftenerEntity init")
 
         super().__init__(coordinator)
+
         self._config_entry = config_entry
+
+        self._coordinator = coordinator
 
         # assume that the device is a softener
         self.device = device
-
-        LOGGER.debug(
-            "Entity init: %s - %s", self.device._name, self.device._device_serial_number
-        )
 
     @property
     def device_info(self) -> DeviceInfo:

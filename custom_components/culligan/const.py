@@ -2,7 +2,6 @@
 
 from typing import Final
 from logging import getLogger
-from datetime import timedelta
 from homeassistant.const import Platform
 
 LOGGER = getLogger(__package__)
@@ -16,7 +15,6 @@ VERSION = "1.0.0"
 
 # Polling
 API_TIMEOUT = 20
-UPDATE_INTERVAL = timedelta(seconds=30)
 
 # Ayla currently has domains for EU, CN, and everywhere else
 AYLA_REGION_ELSEWHERE: Final = "Elsewhere"

@@ -47,7 +47,7 @@ async def async_setup_entry(
             "away mode",
             "away_mode_water_use",
             "mdi:airplane",
-            None,
+            BinarySensorDeviceClass.PRESENCE,
         ),
         (
             # Salt level low
@@ -56,6 +56,14 @@ async def async_setup_entry(
             "sbt_salt_level_low",
             "mdi:shaker-outline",
             None,
+        ),
+        (
+            # Valve position
+            "bypass",
+            "bypass",
+            "valve_position",
+            "mdi:valve",
+            BinarySensorDeviceClass.OPENING,
         ),
     ]
 
@@ -70,16 +78,17 @@ async def async_setup_entry(
                     coordinator,
                     config_entry,
                     device,
-                    sensor[0],
-                    sensor[1],
-                    sensor[2],
-                    sensor[3],
-                    sensor[4],
+                    sensor[0],  # id
+                    sensor[1],  # description (name)
+                    sensor[2],  # key (property map key)
+                    sensor[3],  # icon
+                    sensor[4],  # device class
                 )
             ]
 
         # add devices will add a new device (with area selection)
-        async_add_devices(binary_sensors)
+        if len(binary_sensors) > 0:
+            async_add_devices(binary_sensors)
 
         LOGGER.debug("Finished binary_sensor async_add_devices")
 
@@ -117,7 +126,7 @@ class SoftenerBinarySensor(CulliganWaterSoftenerEntity):
     @property
     def state(self) -> bool:
         """Overwrite state instead of creating new entity class"""
-        return self.device.get_property_value(self._attr_sensor_key)
+        return bool(self.device.get_property_value(self._attr_sensor_key))
 
     @property
     def is_on(self) -> bool:
@@ -138,8 +147,3 @@ class SoftenerBinarySensor(CulliganWaterSoftenerEntity):
     def id(self) -> str | None:
         """Define name as the sensors ID"""
         return f"{self._attr_sensor_id}"
-
-    @property
-    def unique_id(self) -> str | None:
-        """Define unique ID as DSN + ID"""
-        return f"{self._attr_unique_id}"
