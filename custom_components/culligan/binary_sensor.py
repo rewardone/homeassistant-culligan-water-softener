@@ -112,7 +112,7 @@ class SoftenerBinarySensor(CulliganBaseEntity):
         self._attr_device_class = device_class
         self._attr_icon         = icon
         self._attr_sensor_id    = sensor_id
-
+        
         self._attr_unique_id    = device._device_serial_number + "_" + sensor_id
         self.entity_id          = generate_entity_id("binary_sensor.{}", self._attr_unique_id, None, coordinator.hass)
 
