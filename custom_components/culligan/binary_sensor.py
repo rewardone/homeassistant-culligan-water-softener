@@ -10,7 +10,6 @@ from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.entity import generate_entity_id
 
-
 async def async_setup_entry(
     hass: HomeAssistant,
     config_entry: ConfigEntry,
@@ -116,7 +115,6 @@ class SoftenerBinarySensor(CulliganBaseEntity):
 
         self._attr_unique_id    = device._device_serial_number + "_" + sensor_id
         self.entity_id          = generate_entity_id("binary_sensor.{}", self._attr_unique_id, None, coordinator.hass)
-
 
     @property
     def state(self) -> bool:

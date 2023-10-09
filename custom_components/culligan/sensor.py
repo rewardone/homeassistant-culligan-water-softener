@@ -258,7 +258,6 @@ async def async_setup_entry(
 
         LOGGER.debug("Finished sensor async_add_devices")
 
-
 #class SoftenerSensor(CulliganWaterSoftenerEntity):
 class SoftenerSensor(CulliganBaseEntity):
     """Generic sensor template for water softener"""
