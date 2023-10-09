@@ -3,13 +3,26 @@ from .const import DOMAIN
 from .update_coordinator import CulliganUpdateCoordinator
 from ayla_iot_unofficial.device import Device
 from homeassistant.config_entries import ConfigEntry
-from homeassistant.helpers.entity import DeviceInfo
+from homeassistant.helpers.entity import DeviceInfo, Entity
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
+class CulliganBaseEntity(Entity):
+    """Base methods for Culligan entities."""
+
+    def __init__(self, device: Device) -> None:
+        """Init base methods."""
+        self.device = device
+        self.base_unique_id = device._name + "_" + device._device_serial_number
+        self._attr_device_info = DeviceInfo(
+            identifiers={(DOMAIN, self.device._device_serial_number)},
+            manufacturer="Culligan",
+            model=f"{self.device._name + ' ' + self.device._device_model_number}",
+            name=self.device._name
+        )
 
 class CulliganWaterSoftenerEntity(CoordinatorEntity):
     """
-    Softener Entity
+    First attempt. Deprecated for BaseEntity.
     """
 
     def __init__(
@@ -40,12 +53,7 @@ class CulliganWaterSoftenerEntity(CoordinatorEntity):
         )
 
     @property
-    def name(self) -> str | None:
-        """Return the name of the sensor."""
-        return self.device._name
-
-    @property
-    def state(self):
+    def available(self):
         """Return state"""
         online = self.coordinator.device_is_online(self.device._device_serial_number)
         if online:
