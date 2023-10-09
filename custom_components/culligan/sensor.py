@@ -2,14 +2,14 @@
 from __future__ import annotations
 
 from .const import DOMAIN, LOGGER
-from .entity import CulliganWaterSoftenerEntity
+from .entity import CulliganBaseEntity
 from .update_coordinator import CulliganUpdateCoordinator
 
 from ayla_iot_unofficial.device import Device
 from collections.abc import Iterable
 
-from homeassistant.config_entries import ConfigEntry
 from homeassistant.components.sensor import SensorDeviceClass, SensorStateClass
+from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import (
     FORMAT_DATETIME,
     SIGNAL_STRENGTH_DECIBELS_MILLIWATT,
@@ -19,6 +19,7 @@ from homeassistant.const import (
 )
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
+from homeassistant.helpers.entity import generate_entity_id
 
 
 async def async_setup_entry(
@@ -43,7 +44,6 @@ async def async_setup_entry(
             # generic softener status
             "status",
             "status",
-            "status",
             None,
             "mdi:water",
             None,
@@ -53,7 +53,6 @@ async def async_setup_entry(
             # total gallons today
             "total_gallons_today",
             "total gallons today",
-            "total_gallons_today",
             UnitOfVolume.GALLONS,
             "mdi:water-circle",
             SensorDeviceClass.VOLUME_STORAGE,
@@ -64,7 +63,6 @@ async def async_setup_entry(
             # doesn't match app and not sure why ... longer period?
             "average_daily_usage",
             "average daily water usage",
-            "average_daily_usage",
             UnitOfVolume.GALLONS,
             "mdi:cup-water",
             SensorDeviceClass.VOLUME,
@@ -74,7 +72,6 @@ async def async_setup_entry(
             # remaining capacity before regen in gallons
             "capacity_remaining_gallons",
             "capacity remaining before regeneration",
-            "capacity_remaining_gallons",
             UnitOfVolume.GALLONS,
             "mdi:water-minus",
             SensorDeviceClass.VOLUME,
@@ -84,7 +81,6 @@ async def async_setup_entry(
             # current flow rate
             "current_flow_rate",
             "current flow rate",
-            "current_flow_rate",
             "gpm",
             "mdi:waves",
             SensorDeviceClass.WATER,
@@ -94,7 +90,6 @@ async def async_setup_entry(
             # manual salt level as displayed in the app
             "manual_salt_level_rem_calc",
             "manual days of salt remaining",
-            "manual_salt_level_rem_calc",
             UnitOfTime.DAYS,
             "mdi:calendar-clock",
             SensorDeviceClass.DATE,
@@ -104,7 +99,6 @@ async def async_setup_entry(
             # Salt dosage in lbs (storage size)
             "salt_dosage_in_lbs",
             "total salt capacity",
-            "salt_dosage_in_lbs",
             UnitOfMass.POUNDS,
             "mdi:shaker-outline",
             SensorDeviceClass.WEIGHT,
@@ -114,7 +108,6 @@ async def async_setup_entry(
             # days since last regeneration
             "days_since_last_regen",
             "days since last regeneration",
-            "days_since_last_regen",
             UnitOfTime.DAYS,
             "mdi:calendar-refresh",
             SensorDeviceClass.DATE,
@@ -124,7 +117,6 @@ async def async_setup_entry(
             # exact date of last regeneration
             "last_regen_date_time",
             "last regeneration date",
-            "last_regen_date_time",
             FORMAT_DATETIME,
             "mdi:calendar-check",
             SensorDeviceClass.TIMESTAMP,
@@ -134,7 +126,6 @@ async def async_setup_entry(
             # date of next regen
             "next_regen_on_date",
             "next regeneration date",
-            "next_regen_on_date",
             None,  # FORMAT_DATETIME,
             "mdi:calendar-arrow-right",
             SensorDeviceClass.DATE,
@@ -145,7 +136,6 @@ async def async_setup_entry(
             # not applicable if smart sensing
             "regen_interval_days_setting",
             "programmed days between regenerations",
-            "regen_interval_days_setting",
             UnitOfTime.DAYS,
             "mdi:calendar-refresh",
             None,  # SensorDeviceClass.TIMESTAMP,
@@ -154,8 +144,7 @@ async def async_setup_entry(
         (
             # smart 'aqua sensor' Zmin
             "aqua_sensor_Zmin",
-            "aqua Sensor Threshold",
-            "aqua_sensor_Zmin",
+            "aqua sensor threshold",
             "μS/cm",  # micro? Siemens per meter (conductivity)
             "mdi:water-alert",
             None,
@@ -164,8 +153,7 @@ async def async_setup_entry(
         (
             # smart 'aqua sensor' Zcurrent
             "aqua_sensor_Zratio_current",
-            "aqua Sensor",
-            "aqua_sensor_Zratio_current",
+            "aqua sensor",
             "μS/cm",  # micro? Siemens per meter (conductivity)
             "mdi:water-opacity",
             None,
@@ -175,7 +163,6 @@ async def async_setup_entry(
             # average number of days between regens
             "avg_no_of_days_btwn_reg",
             "average days between regenerations",
-            "avg_no_of_days_btwn_reg",
             UnitOfTime.DAYS,
             "mdi:calendar",
             None,  # SensorDeviceClass.TIMESTAMP,
@@ -185,7 +172,6 @@ async def async_setup_entry(
             # hardness programmed in grains
             "hardness_in_grains_per_gal",
             "programmed water hardness",
-            "hardness_in_grains_per_gal",
             "gpg",
             "mdi:water-percent",
             None,
@@ -195,7 +181,6 @@ async def async_setup_entry(
             # Wifi strength
             "rssi",
             "WiFi strength",
-            "rssi",
             SIGNAL_STRENGTH_DECIBELS_MILLIWATT,
             "mdi:wifi-arrow-up-down",
             SensorDeviceClass.SIGNAL_STRENGTH,
@@ -205,7 +190,6 @@ async def async_setup_entry(
             # time remaining in valve position
             "time_rem_in_position",
             "valve position time remaining",
-            "time_rem_in_position",
             None,  # FORMAT_DATETIME,
             "mdi:clock-end",
             None,  # SensorDeviceClass.TIMESTAMP,
@@ -215,7 +199,6 @@ async def async_setup_entry(
             # Total gallons softened since install
             "total_gallons_since_install",
             "total gallons softened since install",
-            "total_gallons_since_install",
             UnitOfVolume.GALLONS,
             "mdi:cup-water",
             SensorDeviceClass.VOLUME_STORAGE,
@@ -225,7 +208,6 @@ async def async_setup_entry(
             # Total regenerations since install
             "total_regens_since_install",
             "total regenerations since install",
-            "total_regens_since_install",
             None,
             "mdi:refresh-circle",
             None,
@@ -235,7 +217,6 @@ async def async_setup_entry(
             # Error codes
             "error_flags",
             "error codes",
-            "error_flags",
             None,
             "mdi:alert-circle",
             None,
@@ -244,7 +225,6 @@ async def async_setup_entry(
         # (
         #     # id
         #     # description
-        #     # key
         #     # unit (of measurement)
         #     # icon
         #     # device_class
@@ -265,11 +245,10 @@ async def async_setup_entry(
                     device,
                     sensor[0],  # id
                     sensor[1],  # description
-                    sensor[2],  # key
-                    sensor[3],  # unit of measurement
-                    sensor[4],  # icon
-                    sensor[5],  # device class
-                    sensor[6],  # state class
+                    sensor[2],  # unit of measurement
+                    sensor[3],  # icon
+                    sensor[4],  # device class
+                    sensor[5],  # state class
                 )
             ]
 
@@ -280,11 +259,21 @@ async def async_setup_entry(
         LOGGER.debug("Finished sensor async_add_devices")
 
 
-class SoftenerSensor(CulliganWaterSoftenerEntity):
+#class SoftenerSensor(CulliganWaterSoftenerEntity):
+class SoftenerSensor(CulliganBaseEntity):
     """Generic sensor template for water softener"""
 
-    _attr_has_entity_name = True
-    _attr_name = None
+    # in entity_platform, deciding entity_id:
+    #   if entity_id is defined, make that the suggested_entity_id
+    #   else if device and has_entity_name
+    #       if use_device_name, then just use the devices name (e.g. all sensors named Softener)
+    #       else, use device name + suggested_object_id
+    #   else use suggested_object_id
+    #   suggested_object_id is config_entry id or device default name ... generates numbers if name is the same
+
+    # default ... sensor name is the property name alone (similar to specifying has_entity_name = True and use_device_name = False)
+    has_entity_name = True  # sensor name is Softener property name ... because device exists by default
+    use_device_name = False # sensor name is property name ... because device name is turned off by this flag
     _attr_should_poll = False
 
     def __init__(
@@ -294,31 +283,29 @@ class SoftenerSensor(CulliganWaterSoftenerEntity):
         device: Device,
         sensor_id: str,
         description: str,
-        key: str,
         unit_of_measurement: str | None,
         icon: str,
         device_class: SensorDeviceClass,
         state_class: SensorStateClass | None,
     ) -> None:
         """Initialize the sensor."""
-        # Entity defines properties: info, name, state
-        super().__init__(coordinator, config_entry, device)
+        super().__init__(device)
 
-        self._attr_device_class = device_class
-        self._attr_native_unit_of_measurement = unit_of_measurement
-        self._attr_state_class = state_class
-        self._attr_sensor_id = sensor_id
-        self._attr_unique_id = device._device_serial_number + "_" + sensor_id
+        self._attr_description                  = description
+        self._attr_device_class                 = device_class
+        self._attr_icon                         = icon
+        self._attr_native_unit_of_measurement   = unit_of_measurement
+        self._attr_sensor_id                    = sensor_id             # this is the ayla property map key to get sensor data value
+        self._attr_state_class                  = state_class
 
-        self._attr_description = description
-        self._attr_sensor_key = key
-        self._attr_icon = icon
+        self._attr_unique_id                    = device._device_serial_number + "_" + sensor_id
+        self.entity_id                          = generate_entity_id("sensor.{}", self._attr_unique_id, None, coordinator.hass)
 
     @property
     def state(self) -> int | None:
         """Using devices stored property map, get the value from the dictionary"""
 
-        if self._attr_sensor_key == "status":
+        if self._attr_sensor_id == "status":
             vacation = self.device.get_property_value("vacation_mode")
             bypass = self.device.get_property_value("actual_state_dealer_bypass")
             if vacation == 1 or vacation == 255:
@@ -332,7 +319,7 @@ class SoftenerSensor(CulliganWaterSoftenerEntity):
                 self._attr_icon = "mdi:water"
             return state
         else:
-            return self.device.get_property_value(self._attr_sensor_key)
+            return self.device.get_property_value(self._attr_sensor_id)
 
     @property
     def unit_of_measurement(self) -> str | None:
@@ -351,10 +338,10 @@ class SoftenerSensor(CulliganWaterSoftenerEntity):
 
     @property
     def name(self) -> str | None:
-        """Define name as description"""
+        """Define name as description. This shows in the Sensor Name column of entities."""
         return f"{self._attr_description}"
-
+    
     @property
-    def id(self) -> str | None:
-        """Define name as the sensors ID"""
-        return f"{self._attr_sensor_id}"
+    def unique_id(self) -> str | None:
+        """Suggest the unique id of the entity. User never sees these."""
+        return f"{self._attr_unique_id}"

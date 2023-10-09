@@ -1,6 +1,6 @@
 """Binary Sensor Entities"""
 from .const import DOMAIN, LOGGER
-from .entity import CulliganWaterSoftenerEntity
+from .entity import CulliganBaseEntity, CulliganWaterSoftenerEntity
 from .update_coordinator import CulliganUpdateCoordinator
 from ayla_iot_unofficial.device import Device
 from collections.abc import Iterable
@@ -8,6 +8,7 @@ from homeassistant.config_entries import ConfigEntry
 from homeassistant.components.binary_sensor import BinarySensorDeviceClass
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
+from homeassistant.helpers.entity import generate_entity_id
 
 
 async def async_setup_entry(
@@ -27,9 +28,8 @@ async def async_setup_entry(
         ", ".join([d.name for d in devices]),
     )
 
-    # id
+    # id (property map key)
     # description (name)
-    # key (property map key)
     # icon
     # device_class
     binary_sensor_config = [
@@ -37,7 +37,6 @@ async def async_setup_entry(
             # Regen pending tonight
             "regen_tonight_pending",
             "regenerate tonight",
-            "regen_tonight_pending",
             "mdi:refresh-circle",
             None,
         ),
@@ -45,7 +44,6 @@ async def async_setup_entry(
             # Away mode water use (alerts)
             "away_mode_water_use",
             "away mode",
-            "away_mode_water_use",
             "mdi:airplane",
             BinarySensorDeviceClass.PRESENCE,
         ),
@@ -53,15 +51,13 @@ async def async_setup_entry(
             # Salt level low
             "sbt_salt_level_low",
             "salt level low",
-            "sbt_salt_level_low",
             "mdi:shaker-outline",
             None,
         ),
         (
             # Valve position
-            "bypass",
-            "bypass",
             "valve_position",
+            "bypass",
             "mdi:valve",
             BinarySensorDeviceClass.OPENING,
         ),
@@ -78,11 +74,10 @@ async def async_setup_entry(
                     coordinator,
                     config_entry,
                     device,
-                    sensor[0],  # id
+                    sensor[0],  # id (property map key)
                     sensor[1],  # description (name)
-                    sensor[2],  # key (property map key)
-                    sensor[3],  # icon
-                    sensor[4],  # device class
+                    sensor[2],  # icon
+                    sensor[3],  # device class
                 )
             ]
 
@@ -93,11 +88,12 @@ async def async_setup_entry(
         LOGGER.debug("Finished binary_sensor async_add_devices")
 
 
-class SoftenerBinarySensor(CulliganWaterSoftenerEntity):
+#class SoftenerBinarySensor(CulliganWaterSoftenerEntity):
+class SoftenerBinarySensor(CulliganBaseEntity):
     """Generic binary sensor template for water softener"""
 
-    _attr_has_entity_name = True
-    _attr_name = None
+    has_entity_name = True
+    use_device_name = False
     _attr_should_poll = False
 
     def __init__(
@@ -107,26 +103,25 @@ class SoftenerBinarySensor(CulliganWaterSoftenerEntity):
         device: Device,
         sensor_id: str,
         description: str,
-        key: str,
         icon: str,
         device_class: BinarySensorDeviceClass,
     ) -> None:
         """Initialize the sensor."""
-        # Entity defines properties: info, name, state
-        super().__init__(coordinator, config_entry, device)
+        super().__init__(device)
 
+        self._attr_description  = description
         self._attr_device_class = device_class
-        self._attr_sensor_id = sensor_id
-        self._attr_unique_id = device._device_serial_number + "_" + sensor_id
+        self._attr_icon         = icon
+        self._attr_sensor_id    = sensor_id
 
-        self._attr_description = description
-        self._attr_sensor_key = key
-        self._attr_icon = icon
+        self._attr_unique_id    = device._device_serial_number + "_" + sensor_id
+        self.entity_id          = generate_entity_id("binary_sensor.{}", self._attr_unique_id, None, coordinator.hass)
+
 
     @property
     def state(self) -> bool:
         """Overwrite state instead of creating new entity class"""
-        return bool(self.device.get_property_value(self._attr_sensor_key))
+        return bool(self.device.get_property_value(self._attr_sensor_id))
 
     @property
     def is_on(self) -> bool:
@@ -142,8 +137,3 @@ class SoftenerBinarySensor(CulliganWaterSoftenerEntity):
     def name(self) -> str | None:
         """Define name as description"""
         return f"{self._attr_description}"
-
-    @property
-    def id(self) -> str | None:
-        """Define name as the sensors ID"""
-        return f"{self._attr_sensor_id}"
