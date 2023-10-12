@@ -274,7 +274,8 @@ class SoftenerSensor(CulliganBaseEntity):
     # default ... sensor name is the property name alone (similar to specifying has_entity_name = True and use_device_name = False)
     has_entity_name = True  # sensor name is Softener property name ... because device exists by default
     use_device_name = False # sensor name is property name ... because device name is turned off by this flag
-    _attr_should_poll = False
+
+    # should_poll should be provided by the UpdateCoordinator
 
     def __init__(
         self,
@@ -289,7 +290,7 @@ class SoftenerSensor(CulliganBaseEntity):
         state_class: SensorStateClass | None,
     ) -> None:
         """Initialize the sensor."""
-        super().__init__(device)
+        super().__init__(coordinator, device)
 
         self._attr_description                  = description
         self._attr_device_class                 = device_class

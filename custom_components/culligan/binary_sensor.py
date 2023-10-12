@@ -41,10 +41,17 @@ async def async_setup_entry(
             None,
         ),
         (
+            # Vacation mode
+            "set_vacation_mode",
+            "vacation mode",
+            "mdi:airplane",
+            BinarySensorDeviceClass.PRESENCE,
+        ),
+        (
             # Away mode water use (alerts)
             "away_mode_water_use",
-            "away mode",
-            "mdi:airplane",
+            "away mode alerts",
+            "mdi:water-alert",
             BinarySensorDeviceClass.PRESENCE,
         ),
         (
@@ -94,7 +101,8 @@ class SoftenerBinarySensor(CulliganBaseEntity):
 
     has_entity_name = True
     use_device_name = False
-    _attr_should_poll = False
+
+    # should_poll should be provided by the UpdateCoordinator
 
     def __init__(
         self,
@@ -107,7 +115,7 @@ class SoftenerBinarySensor(CulliganBaseEntity):
         device_class: BinarySensorDeviceClass,
     ) -> None:
         """Initialize the sensor."""
-        super().__init__(device)
+        super().__init__(coordinator, device)
 
         self._attr_description  = description
         self._attr_device_class = device_class
