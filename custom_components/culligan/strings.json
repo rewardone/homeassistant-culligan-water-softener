@@ -1,67 +1,67 @@
 {
   "config": {
-    "flow_title": "Add Culligan Account",
-    "step": {
-      "user": {
-        "title": "Culligan account signin",
-        "description": "Sign into your Culligan account to access your devices.",
-        "data": {
-          "username": "[%key:common::config_flow::data::username%]",
-          "password": "[%key:common::config_flow::data::password%]",
-          "region": "Region",
-          "update_interval": "Update interval in seconds"
-        },
-        "data_description": {
-          "username": "Culligan email address.",
-          "password": "Culligan account password.",
-          "region": "Ayla uses different services in the EU.  Select your region to connect to the correct service for your account.",
-          "update_interval": "Data update interval in seconds."
-        }
+      "flow_title": "Add Culligan Account",
+      "step": {
+          "user": {
+              "title": "Culligan account signin",
+              "description": "Sign into your Culligan account to access your devices.",
+              "data": {
+                  "username": "[%key:common::config_flow::data::username%]",
+                  "password": "[%key:common::config_flow::data::password%]",
+                  "region": "Region",
+                  "update_interval": "Update interval in seconds"
+              },
+              "data_description": {
+                  "username": "Culligan email address.",
+                  "password": "Culligan account password.",
+                  "region": "Ayla uses different services in the EU.  Select your region to connect to the correct service for your account.",
+                  "update_interval": "Data update interval in seconds."
+              }
+          },
+          "reauth": {
+              "data": {
+                  "username": "[%key:common::config_flow::data::username%]",
+                  "password": "[%key:common::config_flow::data::password%]",
+                  "region": "Region"
+              }
+          }
       },
-      "reauth": {
-        "data": {
-          "username": "[%key:common::config_flow::data::username%]",
-          "password": "[%key:common::config_flow::data::password%]",
-          "region": "Region"
-        }
+      "error": {
+          "cannot_connect": "[%key:common::config_flow::error::cannot_connect%]",
+          "invalid_auth": "[%key:common::config_flow::error::invalid_auth%]",
+          "must_be_email": "The username field must be an email address.",
+          "unknown": "[%key:common::config_flow::error::unknown%]"
+      },
+      "abort": {
+          "already_configured": "[%key:common::config_flow::abort::already_configured_account%]",
+          "cannot_connect": "[%key:common::config_flow::error::cannot_connect%]",
+          "reauth_successful": "[%key:common::config_flow::abort::reauth_successful%]",
+          "unknown": "[%key:common::config_flow::error::unknown%]"
       }
-    },
-    "error": {
-      "cannot_connect": "[%key:common::config_flow::error::cannot_connect%]",
-      "invalid_auth": "[%key:common::config_flow::error::invalid_auth%]",
-      "must_be_email": "The username field must be an email address.",
-      "unknown": "[%key:common::config_flow::error::unknown%]"
-    },
-    "abort": {
-      "already_configured": "[%key:common::config_flow::abort::already_configured_account%]",
-      "cannot_connect": "[%key:common::config_flow::error::cannot_connect%]",
-      "reauth_successful": "[%key:common::config_flow::abort::reauth_successful%]",
-      "unknown": "[%key:common::config_flow::error::unknown%]"
-    }
   },
   "options": {
-    "step": {
-      "init": {
-        "title": "Manage options",
-        "description": "Manage or change settings.",
-        "data": {
-          "update_interval": "Update interval in seconds"
-        },
-        "data_description": {
-          "update_interval": "Data update interval in seconds."
-        }
+      "step": {
+          "init": {
+              "title": "Manage options",
+              "description": "Manage or change settings.",
+              "data": {
+                  "update_interval": "Update interval in seconds"
+              },
+              "data_description": {
+                  "update_interval": "Data update interval in seconds."
+              }
+          }
+      },
+      "error": {
+          "invalid": "Not supported"
       }
-    },
-    "error": {
-      "invalid": "Not supported"
-    }
   },
   "selector": {
-    "region": {
-      "options": {
-        "europe": "Europe",
-        "elsewhere": "Everywhere Else"
+      "region": {
+          "options": {
+              "europe": "Europe",
+              "elsewhere": "Everywhere Else"
+          }
       }
-    }
   }
 }

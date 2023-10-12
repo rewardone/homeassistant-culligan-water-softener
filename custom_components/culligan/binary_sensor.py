@@ -1,6 +1,6 @@
 """Binary Sensor Entities"""
 from .const import DOMAIN, LOGGER
-from .entity import CulliganBaseEntity, CulliganWaterSoftenerEntity
+from .entity import CulliganBaseEntity
 from .update_coordinator import CulliganUpdateCoordinator
 from ayla_iot_unofficial.device import Device
 from collections.abc import Iterable
@@ -41,8 +41,8 @@ async def async_setup_entry(
             None,
         ),
         (
-            # Vacation mode
-            "set_vacation_mode",
+            # Vacation mode ('Gotcha', property name is 'set_vacation_mode', but ayla-iot-unofficial will 'clean' property name)
+            "vacation_mode",
             "vacation mode",
             "mdi:airplane",
             BinarySensorDeviceClass.PRESENCE,

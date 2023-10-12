@@ -12,6 +12,7 @@ from homeassistant.components.sensor import SensorDeviceClass, SensorStateClass
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import (
     FORMAT_DATETIME,
+    PERCENTAGE,
     SIGNAL_STRENGTH_DECIBELS_MILLIWATT,
     UnitOfMass,
     UnitOfTime,
@@ -89,10 +90,10 @@ async def async_setup_entry(
         (
             # manual salt level as displayed in the app
             "manual_salt_level_rem_calc",
-            "manual days of salt remaining",
-            UnitOfTime.DAYS,
+            "salt remaining",
+            PERCENTAGE,
             "mdi:calendar-clock",
-            SensorDeviceClass.DATE,
+            None,
             SensorStateClass.MEASUREMENT,
         ),
         (
