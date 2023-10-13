@@ -7,7 +7,8 @@ from async_timeout import timeout
 
 from ayla_iot_unofficial.device import Device, Softener
 from ayla_iot_unofficial import AylaAuthError, AylaNotAuthedError, AylaAuthExpiringError
-from culligan.exc import CulliganApi, CulliganAuthError, CulliganNotAuthedError, CulliganAuthExpiringError
+from culligan import CulliganApi
+from culligan.exc import CulliganAuthError, CulliganNotAuthedError, CulliganAuthExpiringError
 from culligan.culliganiot_device import CulliganIoTDevice, CulliganIoTSoftener
 
 from datetime import datetime, timedelta
