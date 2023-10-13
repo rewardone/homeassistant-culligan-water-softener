@@ -1,12 +1,13 @@
 """Culligan Sensor Entities."""
 from __future__ import annotations
 
-from .const import DOMAIN, LOGGER
+from .const import DOMAIN, LOGGER, PROPERTY_VALUE_MAP
 from .entity import CulliganBaseEntity
 from .update_coordinator import CulliganUpdateCoordinator
 
-from ayla_iot_unofficial.device import Device
+from ayla_iot_unofficial.device import Device, Softener
 from collections.abc import Iterable
+from culligan.culliganiot_device import CulliganIoTDevice, CulliganIoTSoftener
 
 from homeassistant.components.sensor import SensorDeviceClass, SensorStateClass
 from homeassistant.config_entries import ConfigEntry
@@ -32,7 +33,7 @@ async def async_setup_entry(
     LOGGER.debug("Sensor async_setup_entry")
 
     coordinator: CulliganUpdateCoordinator = hass.data[DOMAIN][config_entry.entry_id]
-    devices: Iterable[Device] = coordinator.culligan_devices.values()
+    devices: Iterable[Device] | Iterable[CulliganIoTDevice] = coordinator.culligan_devices.values()
     device_names = [d.name for d in devices]
     LOGGER.debug(
         "Found %d Culligan device(s): %s",
@@ -233,6 +234,41 @@ async def async_setup_entry(
         # ),
     ]
 
+    # add daily / hourly usages
+    for key in PROPERTY_VALUE_MAP.keys():
+        if key[:-1] == "daily_usage_day_":
+            day = key[-1]
+            softener_sensors += [(
+                key,
+                f"daily usage today - {day}d",
+                UnitOfVolume.GALLONS,
+                "mdi:cup-water",
+                None,
+                SensorStateClass.MEASUREMENT,
+            )]
+        elif key[:3] == "avg" and key[-3:] in ["sun","mon","tue","wed","thr","fri","sat"]:
+            day = key[-3:]
+            softener_sensors += [(
+                key,
+                f"average usage {day}",
+                UnitOfVolume.GALLONS,
+                "mdi:cup-water",
+                None,
+                SensorStateClass.MEASUREMENT,
+            )]
+        elif key[:17] == "hourly_usage_hour":
+            hour = key.split("_")[3]
+            softener_sensors += [(
+                key,
+                f"hourly usage now - {hour}h",
+                UnitOfVolume.GALLONS,
+                "mdi:cup-water",
+                None,
+                SensorStateClass.MEASUREMENT,
+            )]
+        else:
+            pass
+
     # Method two ... create individual sensors from a map of defined sensor attributes
     for device in devices:
         LOGGER.debug("Working on device: %s", device._device_serial_number)
@@ -282,7 +318,7 @@ class SoftenerSensor(CulliganBaseEntity):
         self,
         coordinator: CulliganUpdateCoordinator,
         config_entry: ConfigEntry,
-        device: Device,
+        device: Device | CulliganIoTDevice,
         sensor_id: str,
         description: str,
         unit_of_measurement: str | None,
@@ -303,16 +339,28 @@ class SoftenerSensor(CulliganBaseEntity):
         self._attr_unique_id                    = device._device_serial_number + "_" + sensor_id
         self.entity_id                          = generate_entity_id("sensor.{}", self._attr_unique_id, None, coordinator.hass)
 
+        self.io_culligan                        = isinstance(device, CulliganIoTDevice)
+        self.io_ayla                            = isinstance(device, Device)
+
     @property
     def state(self) -> int | None:
         """Using devices stored property map, get the value from the dictionary"""
 
+        if self.io_culligan:
+            BYPASS_PROPERTY   = PROPERTY_VALUE_MAP["actual_state_dealer_bypass"]
+            VAC_MODE_PROPERTY = PROPERTY_VALUE_MAP["vacation_mode"]
+            SENSOR_ID         = PROPERTY_VALUE_MAP[self._attr_sensor_id]
+        else:
+            BYPASS_PROPERTY   = "actual_state_dealer_bypass"
+            VAC_MODE_PROPERTY = "vacation_mode"
+            SENSOR_ID         = self._attr_sensor_id
+
         if self._attr_sensor_id == "status":
-            vacation = self.device.get_property_value("vacation_mode")
-            bypass = self.device.get_property_value("actual_state_dealer_bypass")
+            vacation = self.device.get_property_value(VAC_MODE_PROPERTY)
+            bypass = self.device.get_property_value(BYPASS_PROPERTY)
             if vacation == 1 or vacation == 255:
                 state = "Vacation"
-                self._attr_icon = "mdi:plain"
+                self._attr_icon = "mdi:airplane"
             elif bypass == 1:
                 state = "Bypass"
                 self._attr_icon = "mdi:water-off"
@@ -321,7 +369,7 @@ class SoftenerSensor(CulliganBaseEntity):
                 self._attr_icon = "mdi:water"
             return state
         else:
-            return self.device.get_property_value(self._attr_sensor_id)
+            return self.device.get_property_value(SENSOR_ID)
 
     @property
     def unit_of_measurement(self) -> str | None:

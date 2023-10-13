@@ -1,9 +1,10 @@
 """Binary Sensor Entities"""
-from .const import DOMAIN, LOGGER
+from .const import DOMAIN, LOGGER, PROPERTY_VALUE_MAP
 from .entity import CulliganBaseEntity
 from .update_coordinator import CulliganUpdateCoordinator
-from ayla_iot_unofficial.device import Device
+from ayla_iot_unofficial.device import Device, Softener
 from collections.abc import Iterable
+from culligan.culliganiot_device import CulliganIoTDevice, CulliganIoTSoftener
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.components.binary_sensor import BinarySensorDeviceClass
 from homeassistant.core import HomeAssistant
@@ -20,7 +21,7 @@ async def async_setup_entry(
     LOGGER.debug("Binary sensor async_setup_entry")
 
     coordinator: CulliganUpdateCoordinator = hass.data[DOMAIN][config_entry.entry_id]
-    devices: Iterable[Device] = coordinator.culligan_devices.values()
+    devices: Iterable[Device] | Iterable[CulliganIoTDevice] = coordinator.culligan_devices.values()
     device_names = [d.name for d in devices]
     LOGGER.debug(
         "Found %d Culligan device(s): %s",
@@ -55,7 +56,7 @@ async def async_setup_entry(
             BinarySensorDeviceClass.PRESENCE,
         ),
         (
-            # Salt level low
+            # Salt level low ... mapped to salt_alarm_mode in culliganiot ... probably not correct
             "sbt_salt_level_low",
             "salt level low",
             "mdi:shaker-outline",
@@ -108,7 +109,7 @@ class SoftenerBinarySensor(CulliganBaseEntity):
         self,
         coordinator: CulliganUpdateCoordinator,
         config_entry: ConfigEntry,
-        device: Device,
+        device: Device | CulliganIoTDevice,
         sensor_id: str,
         description: str,
         icon: str,
@@ -125,11 +126,20 @@ class SoftenerBinarySensor(CulliganBaseEntity):
         self._attr_unique_id    = device._device_serial_number + "_" + sensor_id
         self.entity_id          = generate_entity_id("binary_sensor.{}", self._attr_unique_id, None, coordinator.hass)
 
+        self.io_culligan        = isinstance(device, CulliganIoTDevice)
+        self.io_ayla            = isinstance(device, Device)
+
 
     @property
     def state(self) -> bool:
         """Overwrite state instead of creating new entity class"""
-        return bool(self.device.get_property_value(self._attr_sensor_id))
+        #LOGGER.debug(f"For {self._attr_sensor_id} got {self.device.get_property_value(self._attr_sensor_id)}")
+        if self.io_culligan:
+            SENSOR_ID         = PROPERTY_VALUE_MAP[self._attr_sensor_id]
+        else:
+            SENSOR_ID         = self._attr_sensor_id
+
+        return bool(self.device.get_property_value(SENSOR_ID))
 
     @property
     def is_on(self) -> bool:

@@ -78,17 +78,36 @@ async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> b
                 return False
         except CannotConnect as exc:
             raise ConfigEntryNotReady from exc
+        
+    LOGGER.debug("Asking for devices from Culligan")
+    culliganiot_devices = await culligan_api.async_get_devices()
+    device_names = ", ".join(d.name for d in culliganiot_devices)
+    LOGGER.debug("Found %d Culligan device(s): %s", len(culliganiot_devices), device_names)
+    if len(culliganiot_devices) > 0:
+        for d in culliganiot_devices:
+            LOGGER.debug(f"    of type: {type(d)}")
 
-    LOGGER.debug("Asking for devices")
+    LOGGER.debug("Asking for devices from Ayla")
     culligan_devices = await culligan_api.Ayla.async_get_devices()
-
     device_names = ", ".join(d.name for d in culligan_devices)
-    LOGGER.debug("Found %d Culligan device(s): %s", len(culligan_devices), device_names)
-    LOGGER.debug(device_names)
+    LOGGER.debug("Found %d Ayla-connected Culligan device(s): %s", len(culligan_devices), device_names)
+    if len(culligan_devices) > 0:
+        for d in culligan_devices:
+            LOGGER.debug(f"    of type: {type(d)}")
+
+    if len(culliganiot_devices) > 0 and len(culligan_devices) > 0:
+        LOGGER.debug("Adding CulliganIoT and Ayla devices together")
+        all_devices = culliganiot_devices + culligan_devices
+    elif len(culliganiot_devices) > 0 and len(culligan_devices) < 1:
+        LOGGER.debug("Only found CulliganIoT devices")
+        all_devices = culliganiot_devices
+    elif len(culliganiot_devices) < 1 and len(culligan_devices) > 0:
+        LOGGER.debug("Only found Ayla-connected devices")
+        all_devices = culligan_devices
 
     LOGGER.debug("Setting coordinator")
     coordinator = CulliganUpdateCoordinator(
-        hass, config_entry, culligan_api, culligan_devices
+        hass, config_entry, culligan_api, all_devices
     )
 
     LOGGER.debug("refreshing coordinator")
