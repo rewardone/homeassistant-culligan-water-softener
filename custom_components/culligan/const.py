@@ -29,7 +29,7 @@ CONF_ENABLED = "enabled"
 CULLIGAN_APP_ID = "OAhRjZjfBSwKLV8MTCjscAdoyJKzjxQW"
 
 # Platforms
-PLATFORMS = [Platform.BINARY_SENSOR, Platform.SENSOR]
+PLATFORMS = [Platform.BINARY_SENSOR, Platform.SENSOR, Platform.SWITCH]
 
 STARTUP_MESSAGE = f"""
 -------------------------------------------------------------------

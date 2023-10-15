@@ -89,6 +89,15 @@ async def async_setup_entry(
             SensorStateClass.MEASUREMENT,
         ),
         (
+            # requested by user
+            "days_salt_remaining",
+            "salt remaining",
+            UnitOfTime.DAYS,
+            "mdi:calendar-clock",
+            None,
+            SensorStateClass.MEASUREMENT,
+        ),
+        (
             # manual salt level as displayed in the app
             "manual_salt_level_rem_calc",
             "salt remaining",
@@ -271,7 +280,7 @@ async def async_setup_entry(
 
     # Method two ... create individual sensors from a map of defined sensor attributes
     for device in devices:
-        LOGGER.debug("Working on device: %s", device._device_serial_number)
+        LOGGER.debug("Working on adding sensors device: %s", device._device_serial_number)
         sensors = []
         for sensor in softener_sensors:
             LOGGER.debug("sensor calling async_add: %s", sensor[0])
@@ -333,29 +342,38 @@ class SoftenerSensor(CulliganBaseEntity):
         self._attr_device_class                 = device_class
         self._attr_icon                         = icon
         self._attr_native_unit_of_measurement   = unit_of_measurement
-        self._attr_sensor_id                    = sensor_id             # this is the ayla property map key to get sensor data value
+        #self._attr_sensor_id                    = sensor_id             # this is the ayla property map key to get sensor data value
         self._attr_state_class                  = state_class
 
         self._attr_unique_id                    = device._device_serial_number + "_" + sensor_id
         self.entity_id                          = generate_entity_id("sensor.{}", self._attr_unique_id, None, coordinator.hass)
 
         self.io_culligan                        = isinstance(device, CulliganIoTDevice)
-        self.io_ayla                            = isinstance(device, Device)
+        # if CulliganIoT device
+        if self.io_culligan:
+            self._attr_sensor_id                = PROPERTY_VALUE_MAP[sensor_id]   # this is the mapped Culligan sensor data value
+        else:
+            self._attr_sensor_id                = sensor_id             # this is the ayla property map key to get sensor data value
+
+    @property
+    def sensor_id(self):
+        """Return the property key needed to get values"""
+        return self._attr_sensor_id
 
     @property
     def state(self) -> int | None:
         """Using devices stored property map, get the value from the dictionary"""
-
+        SENSOR_ID             = self.sensor_id
         if self.io_culligan:
             BYPASS_PROPERTY   = PROPERTY_VALUE_MAP["actual_state_dealer_bypass"]
             VAC_MODE_PROPERTY = PROPERTY_VALUE_MAP["vacation_mode"]
-            SENSOR_ID         = PROPERTY_VALUE_MAP[self._attr_sensor_id]
+            #SENSOR_ID         = PROPERTY_VALUE_MAP[self._attr_sensor_id]
         else:
             BYPASS_PROPERTY   = "actual_state_dealer_bypass"
             VAC_MODE_PROPERTY = "vacation_mode"
-            SENSOR_ID         = self._attr_sensor_id
+            #SENSOR_ID         = self._attr_sensor_id
 
-        if self._attr_sensor_id == "status":
+        if self._attr_sensor_id in ["status","unit_status_tank_1"]:
             vacation = self.device.get_property_value(VAC_MODE_PROPERTY)
             bypass = self.device.get_property_value(BYPASS_PROPERTY)
             if vacation == 1 or vacation == 255:
