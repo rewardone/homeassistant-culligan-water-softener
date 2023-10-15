@@ -20,14 +20,16 @@ from ayla_iot_unofficial.device import Device, Softener
 from collections.abc import Iterable
 from culligan.culliganiot_device import CulliganIoTDevice, CulliganIoTSoftener
 
-
-
 # ATTR_REVERT_TO_MODE = "revert_to_mode"
 # ATTR_SLEEP_MINUTES = "sleep_minutes"
 # SERVICE_SET_SLEEP_MODE = "set_sleep_mode"
 # SERVICE_SET_AWAY_MODE = "set_away_mode"
 # SERVICE_SET_HOME_MODE = "set_home_mode"
 # SERVICE_RUN_HEALTH_TEST = "run_health_test"
+
+AYLA_DEVICES = [Device, Softener]
+CULLIGAN_IOT_DEVICES = [CulliganIoTDevice, CulliganIoTSoftener]
+ALL_DEVICES = AYLA_DEVICES + CULLIGAN_IOT_DEVICES
 
 
 async def async_setup_entry(
@@ -52,7 +54,7 @@ async def async_setup_entry(
             "vacation mode",
             "mdi:airplane",
             "mdi:airplane-off",
-            [Device, Softener],
+            ALL_DEVICES,
         )
     ]
 
