@@ -43,7 +43,7 @@ If you have any issues with this you need to open an issue here:
 
 # key is Ayla property, value is culliganIoT property
 PROPERTY_VALUE_MAP = {
-    "actual_state_dealer_bypass": "actual_state_dealer_bypassd",        # no sensor created
+    "actual_state_dealer_bypass": "actual_state_dealer_bypass",        # no sensor created
     "aqua_sensor_Zmin"          : "aquasensor_z_min_tank_1",
     "aqua_sensor_Zratio_current": "aquasensor_z_ratio_current_tank_1",
     "away_mode_water_use"       : "away_mode_water_use",
