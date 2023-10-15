@@ -1,5 +1,5 @@
 vacation_mode:
   target:
-    device:
+    entity:
       integration: culligan
       domain: switch
