@@ -8,7 +8,7 @@ import voluptuous as vol
 from homeassistant.components.switch import SwitchEntity
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers import entity_platform
+# from homeassistant.helpers import entity_platform
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.entity import generate_entity_id
 
@@ -22,12 +22,12 @@ from culligan.culliganiot_device import CulliganIoTDevice, CulliganIoTSoftener
 
 
 
-ATTR_REVERT_TO_MODE = "revert_to_mode"
-ATTR_SLEEP_MINUTES = "sleep_minutes"
-SERVICE_SET_SLEEP_MODE = "set_sleep_mode"
-SERVICE_SET_AWAY_MODE = "set_away_mode"
-SERVICE_SET_HOME_MODE = "set_home_mode"
-SERVICE_RUN_HEALTH_TEST = "run_health_test"
+# ATTR_REVERT_TO_MODE = "revert_to_mode"
+# ATTR_SLEEP_MINUTES = "sleep_minutes"
+# SERVICE_SET_SLEEP_MODE = "set_sleep_mode"
+# SERVICE_SET_AWAY_MODE = "set_away_mode"
+# SERVICE_SET_HOME_MODE = "set_home_mode"
+# SERVICE_RUN_HEALTH_TEST = "run_health_test"
 
 
 async def async_setup_entry(
