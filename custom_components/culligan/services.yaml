@@ -1,4 +1,6 @@
 vacation_mode:
+  name: "vacation mode"
+  description: "Switch control for vacation mode"
   target:
     entity:
       integration: culligan
