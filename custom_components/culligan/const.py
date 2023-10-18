@@ -7,6 +7,7 @@ from homeassistant.const import Platform
 LOGGER = getLogger(__package__)
 
 # Basic information
+CLIENT: Final = "client"
 DOMAIN: Final = "culligan"
 DEFAULT_NAME = DOMAIN
 NAME = "Culligan"

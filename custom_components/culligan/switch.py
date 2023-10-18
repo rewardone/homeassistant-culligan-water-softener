@@ -39,7 +39,8 @@ async def async_setup_entry(
 ) -> None:
     """Set up the Culligan switches from config entry."""
     LOGGER.debug("Switch async_setup_entry")
-    coordinator: CulliganUpdateCoordinator = hass.data[DOMAIN][config_entry.entry_id]
+    # coordinator: CulliganUpdateCoordinator = hass.data[DOMAIN][config_entry.entry_id]
+    coordinator: CulliganUpdateCoordinator = hass.data[DOMAIN][config_entry.entry_id]["coordinator"]
     devices: Iterable[Device] | Iterable[CulliganIoTDevice] = coordinator.culligan_devices.values()
 
     # id/key as in property map
@@ -67,7 +68,7 @@ async def async_setup_entry(
                 switches += [
                     SoftenerSwitch(
                         coordinator,
-                        config_entry,
+                        # config_entry,
                         device,
                         switch[0],  # id (property map key)
                         switch[1],  # description (name)
@@ -116,12 +117,21 @@ class SoftenerSwitch(CulliganBaseEntity, SwitchEntity):
     has_entity_name = True  # sensor name is Softener property name ... because device exists by default
     use_device_name = False # sensor name is property name ... because device name is turned off by this flag
 
-    def __init__(self, coordinator: CulliganUpdateCoordinator, config_entry: ConfigEntry, device: Device | CulliganIoTDevice, sensor_id: str, description: str, icon_on: str, icon_off: str) -> None:
+    def __init__(
+            self, 
+            coordinator: CulliganUpdateCoordinator, 
+            #config_entry: ConfigEntry, 
+            device: Device | CulliganIoTDevice, 
+            sensor_id: str, 
+            description: str, 
+            icon_on: str, 
+            icon_off: str
+        ) -> None:
         """Initialize the Softener switch."""
         super().__init__(coordinator, device)
 
         # if CulliganIoT device
-        if isinstance(device, CulliganIoTDevice):
+        if self.io_culligan: # isinstance(device, CulliganIoTDevice):
             self._attr_sensor_id                = PROPERTY_VALUE_MAP[sensor_id]   # this is the mapped Culligan sensor data value
         else:
             self._attr_sensor_id                = sensor_id             # this is the ayla property map key to get sensor data value

@@ -5,11 +5,11 @@ from .const import DOMAIN, LOGGER, PROPERTY_VALUE_MAP
 from .entity import CulliganBaseEntity
 from .update_coordinator import CulliganUpdateCoordinator
 
-from ayla_iot_unofficial.device import Device, Softener
+from ayla_iot_unofficial.device import Device
 from collections.abc import Iterable
-from culligan.culliganiot_device import CulliganIoTDevice, CulliganIoTSoftener
+from culligan.culliganiot_device import CulliganIoTDevice
 
-from homeassistant.components.sensor import SensorDeviceClass, SensorStateClass
+from homeassistant.components.sensor import SensorDeviceClass, SensorEntity, SensorStateClass
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import (
     FORMAT_DATETIME,
@@ -32,7 +32,8 @@ async def async_setup_entry(
     """Set up the Culligan sensor."""
     LOGGER.debug("Sensor async_setup_entry")
 
-    coordinator: CulliganUpdateCoordinator = hass.data[DOMAIN][config_entry.entry_id]
+    # coordinator: CulliganUpdateCoordinator = hass.data[DOMAIN][config_entry.entry_id]
+    coordinator: CulliganUpdateCoordinator = hass.data[DOMAIN][config_entry.entry_id]["coordinator"]
     devices: Iterable[Device] | Iterable[CulliganIoTDevice] = coordinator.culligan_devices.values()
     device_names = [d.name for d in devices]
     LOGGER.debug(
@@ -287,7 +288,7 @@ async def async_setup_entry(
             sensors += [
                 SoftenerSensor(
                     coordinator,
-                    config_entry,
+                    # config_entry,
                     device,
                     sensor[0],  # id
                     sensor[1],  # description
@@ -306,7 +307,7 @@ async def async_setup_entry(
 
 
 #class SoftenerSensor(CulliganWaterSoftenerEntity):
-class SoftenerSensor(CulliganBaseEntity):
+class SoftenerSensor(CulliganBaseEntity, SensorEntity):
     """Generic sensor template for water softener"""
 
     # in entity_platform, deciding entity_id:
@@ -326,7 +327,7 @@ class SoftenerSensor(CulliganBaseEntity):
     def __init__(
         self,
         coordinator: CulliganUpdateCoordinator,
-        config_entry: ConfigEntry,
+        # config_entry: ConfigEntry,
         device: Device | CulliganIoTDevice,
         sensor_id: str,
         description: str,
@@ -338,22 +339,22 @@ class SoftenerSensor(CulliganBaseEntity):
         """Initialize the sensor."""
         super().__init__(coordinator, device)
 
-        self._attr_description                  = description
-        self._attr_device_class                 = device_class
-        self._attr_icon                         = icon
-        self._attr_native_unit_of_measurement   = unit_of_measurement
-        #self._attr_sensor_id                    = sensor_id             # this is the ayla property map key to get sensor data value
-        self._attr_state_class                  = state_class
+        self._attr_description                      = description
+        self._attr_device_class: SensorDeviceClass  = device_class
+        self._attr_icon                             = icon
+        self._attr_native_unit_of_measurement       = unit_of_measurement
+        #self._attr_sensor_id                       = sensor_id             # this is the ayla property map key to get sensor data value
+        self._attr_state_class:  SensorStateClass   = state_class
 
-        self._attr_unique_id                    = device._device_serial_number + "_" + sensor_id
-        self.entity_id                          = generate_entity_id("sensor.{}", self._attr_unique_id, None, coordinator.hass)
+        self._attr_unique_id                        = device._device_serial_number + "_" + sensor_id
+        self.entity_id                              = generate_entity_id("sensor.{}", self._attr_unique_id, None, coordinator.hass)
 
-        self.io_culligan                        = isinstance(device, CulliganIoTDevice)
+        # self.io_culligan                            = isinstance(device, CulliganIoTDevice)
         # if CulliganIoT device
         if self.io_culligan:
-            self._attr_sensor_id                = PROPERTY_VALUE_MAP[sensor_id]   # this is the mapped Culligan sensor data value
+            self._attr_sensor_id                    = PROPERTY_VALUE_MAP[sensor_id]   # this is the mapped Culligan sensor data value
         else:
-            self._attr_sensor_id                = sensor_id             # this is the ayla property map key to get sensor data value
+            self._attr_sensor_id                    = sensor_id             # this is the ayla property map key to get sensor data value
 
     @property
     def sensor_id(self):
@@ -404,6 +405,11 @@ class SoftenerSensor(CulliganBaseEntity):
     def device_class(self) -> SensorDeviceClass | None:
         """Define the device class"""
         return self._attr_device_class
+    
+    @property
+    def state_class(self) -> SensorStateClass | None:
+        """Define the state class"""
+        return self._attr_state_class
 
     @property
     def name(self) -> str | None:

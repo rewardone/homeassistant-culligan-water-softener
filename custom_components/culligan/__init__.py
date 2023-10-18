@@ -1,6 +1,7 @@
 """Culligan Integration."""
 from .const import (
     API_TIMEOUT,
+    CLIENT,
     CULLIGAN_APP_ID,
     DOMAIN,
     LOGGER,
@@ -44,7 +45,7 @@ async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> b
     LOGGER.debug("title %s", config_entry.title)
     LOGGER.debug("data %s", config_entry.data)
     LOGGER.debug("options %s", config_entry.options)
-    LOGGER.debug("unique_id %s", config_entry.unique_id)
+    LOGGER.debug("unique_id %s", config_entry.unique_id) # set to DSN
     LOGGER.debug("source %s", config_entry.source)
 
     # raise ConfigEntryNotReady
@@ -54,13 +55,15 @@ async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> b
         LOGGER.debug("No DOMAIN ... setting %s", DOMAIN)
         hass.data.setdefault(DOMAIN, {})
         LOGGER.info(STARTUP_MESSAGE)
+    LOGGER.debug(f"Domain is now: {hass.data[DOMAIN]}")
 
     # if we entered from UI ... a connection check was made and an object exists already
     # don't recreate ... but also can't serialize culligan_api objects in the config_entry
-    try:
+    if "culligan_api" in config_entry.data["instance"].keys():
         culligan_api = config_entry.data["instance"]["culligan_api"]
-    except KeyError:
-        LOGGER.debug("Instance was not given ... creating one")
+    #except KeyError:
+    else:
+        LOGGER.debug("CulliganApi instance was not passed from config_entry ... creating one")
         try:
             culligan_api = CulliganApi(
                 username=config_entry.data["user_input"][CONF_USERNAME],
@@ -71,14 +74,16 @@ async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> b
         except CannotConnect as exc:
             raise ConfigEntryNotReady from exc
 
-        # connect_or_timeout will set API token and CulliganAPI.Ayla
-        try:
-            # if successful, culligan_api.Ayla will be initialized
-            if not await async_connect_or_timeout(culligan_api):
-                return False
-        except CannotConnect as exc:
-            raise ConfigEntryNotReady from exc
-        
+    # connect_or_timeout will set API token and CulliganAPI.Ayla
+    try:
+        LOGGER.debug("Calling connect_or_timeout to sign in and ensure API tokens")
+        # if successful, culligan_api.Ayla will be initialized
+        if not await async_connect_or_timeout(culligan_api):
+            return False
+    except CannotConnect as exc:
+        raise ConfigEntryNotReady from exc
+    
+    # get device registry from Culligan
     LOGGER.debug("Asking for devices from Culligan")
     culliganiot_devices = await culligan_api.async_get_devices()
     device_names = ", ".join(d.name for d in culliganiot_devices)
@@ -87,6 +92,7 @@ async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> b
         for d in culliganiot_devices:
             LOGGER.debug(f"    of type: {type(d)}")
 
+    # get device registry from ayla
     LOGGER.debug("Asking for devices from Ayla")
     culligan_devices = await culligan_api.Ayla.async_get_devices()
     device_names = ", ".join(d.name for d in culligan_devices)
@@ -95,6 +101,7 @@ async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> b
         for d in culligan_devices:
             LOGGER.debug(f"    of type: {type(d)}")
 
+    # combine the list of devices from both to all_devices
     if len(culliganiot_devices) > 0 and len(culligan_devices) > 0:
         LOGGER.debug("Adding CulliganIoT and Ayla devices together")
         all_devices = culliganiot_devices + culligan_devices
@@ -105,13 +112,23 @@ async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> b
         LOGGER.debug("Only found Ayla-connected devices")
         all_devices = culligan_devices
 
+    # instance the data update coordinator
     LOGGER.debug("Setting coordinator")
     coordinator = CulliganUpdateCoordinator(
         hass, config_entry, culligan_api, all_devices
     )
 
+    # Fetch initial data so we have data when entities subscribe
+    #
+    # If the refresh fails, async_config_entry_first_refresh will
+    # raise ConfigEntryNotReady and setup will try again later
+    #
+    # If you do not want to retry setup on failure, use
+    # coordinator.async_refresh() instead
+    #
     LOGGER.debug("refreshing coordinator")
-    await coordinator.async_refresh()
+    # await coordinator.async_refresh()
+    await coordinator.async_config_entry_first_refresh()
 
     if not coordinator.last_update_success:
         LOGGER.debug("refresh was not successful")
@@ -119,7 +136,12 @@ async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> b
 
     LOGGER.debug("calling add_update_listener(s)")
 
-    hass.data[DOMAIN][config_entry.entry_id] = coordinator
+    # don't overwrite the entry_id itself ... add a properpty
+    #     coordinator has an instance of api coordinator.culligan_api
+    # hass.data[DOMAIN][config_entry.entry_id] = coordinator
+    LOGGER.debug(f"entry_id was: {config_entry.entry_id}")
+    hass.data[DOMAIN][config_entry.entry_id] = {}
+    hass.data[DOMAIN][config_entry.entry_id]["coordinator"] = coordinator
 
     LOGGER.debug("Calling forward_entry_setup")
     for platform in PLATFORMS:
@@ -141,8 +163,10 @@ async def async_connect_or_timeout(culligan: CulliganApi) -> bool:
     LOGGER.debug("async_connect_or_timeout")
     try:
         async with async_timeout.timeout(API_TIMEOUT):
-            LOGGER.debug("Initialize connection to Ayla networks API")
+            LOGGER.debug("Signing into Culligan")
             await culligan.async_sign_in()
+
+            LOGGER.debug("Passed sign in ... parsing access_tokens for Ayla")
             culligan.Ayla = culligan.get_ayla_api()
 
             return True
@@ -189,7 +213,8 @@ async def async_unload_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> 
         )
     )
 
-    coordinator = hass.data[DOMAIN][config_entry.entry_id]
+    # coordinator = hass.data[DOMAIN][config_entry.entry_id]
+    coordinator = hass.data[DOMAIN][config_entry.entry_id]["coordinator"]
 
     await async_disconnect_or_timeout(coordinator)
 

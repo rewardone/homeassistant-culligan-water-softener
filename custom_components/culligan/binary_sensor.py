@@ -2,11 +2,11 @@
 from .const import DOMAIN, LOGGER, PROPERTY_VALUE_MAP
 from .entity import CulliganBaseEntity
 from .update_coordinator import CulliganUpdateCoordinator
-from ayla_iot_unofficial.device import Device, Softener
+from ayla_iot_unofficial.device import Device
 from collections.abc import Iterable
-from culligan.culliganiot_device import CulliganIoTDevice, CulliganIoTSoftener
+from culligan.culliganiot_device import CulliganIoTDevice
 from homeassistant.config_entries import ConfigEntry
-from homeassistant.components.binary_sensor import BinarySensorDeviceClass
+from homeassistant.components.binary_sensor import BinarySensorDeviceClass, BinarySensorEntity
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.entity import generate_entity_id
@@ -20,7 +20,8 @@ async def async_setup_entry(
     """Set up Culligan binary sensors"""
     LOGGER.debug("Binary sensor async_setup_entry")
 
-    coordinator: CulliganUpdateCoordinator = hass.data[DOMAIN][config_entry.entry_id]
+    # coordinator: CulliganUpdateCoordinator = hass.data[DOMAIN][config_entry.entry_id]
+    coordinator: CulliganUpdateCoordinator = hass.data[DOMAIN][config_entry.entry_id]["coordinator"]
     devices: Iterable[Device] | Iterable[CulliganIoTDevice] = coordinator.culligan_devices.values()
     device_names = [d.name for d in devices]
     LOGGER.debug(
@@ -97,7 +98,7 @@ async def async_setup_entry(
 
 
 #class SoftenerBinarySensor(CulliganWaterSoftenerEntity):
-class SoftenerBinarySensor(CulliganBaseEntity):
+class SoftenerBinarySensor(CulliganBaseEntity, BinarySensorEntity):
     """Generic binary sensor template for water softener"""
 
     has_entity_name = True
@@ -118,16 +119,16 @@ class SoftenerBinarySensor(CulliganBaseEntity):
         """Initialize the sensor."""
         super().__init__(coordinator, device)
 
-        self._attr_description  = description
-        self._attr_device_class = device_class
-        self._attr_icon         = icon
-        self._attr_sensor_id    = sensor_id
+        self._attr_description                              = description
+        self._attr_device_class: BinarySensorDeviceClass    = device_class
+        self._attr_icon                                     = icon
+        self._attr_sensor_id                                = sensor_id
 
-        self._attr_unique_id    = device._device_serial_number + "_" + sensor_id
-        self.entity_id          = generate_entity_id("binary_sensor.{}", self._attr_unique_id, None, coordinator.hass)
+        self._attr_unique_id                                = device._device_serial_number + "_" + sensor_id
+        self.entity_id                                      = generate_entity_id("binary_sensor.{}", self._attr_unique_id, None, coordinator.hass)
 
-        self.io_culligan        = isinstance(device, CulliganIoTDevice)
-        self.io_ayla            = isinstance(device, Device)
+        # self.io_culligan                                    = isinstance(device, CulliganIoTDevice)
+        # self.io_ayla                                        = isinstance(device, Device)
 
 
     @property
@@ -155,3 +156,8 @@ class SoftenerBinarySensor(CulliganBaseEntity):
     def name(self) -> str | None:
         """Define name as description"""
         return f"{self._attr_description}"
+
+    @property
+    def device_class(self) -> BinarySensorDeviceClass | None:
+        """Return the set device_class"""
+        return self._attr_device_class
