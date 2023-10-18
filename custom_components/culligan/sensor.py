@@ -57,8 +57,8 @@ async def async_setup_entry(
             "total gallons today",
             UnitOfVolume.GALLONS,
             "mdi:water-circle",
-            SensorDeviceClass.VOLUME_STORAGE,
-            SensorStateClass.MEASUREMENT,
+            SensorDeviceClass.WATER,
+            SensorStateClass.TOTAL_INCREASING,
         ),
         (
             # average daily usage sensor
@@ -67,7 +67,7 @@ async def async_setup_entry(
             "average daily water usage",
             UnitOfVolume.GALLONS,
             "mdi:cup-water",
-            SensorDeviceClass.VOLUME,
+            SensorDeviceClass.WATER,
             SensorStateClass.MEASUREMENT,
         ),
         (
@@ -76,7 +76,7 @@ async def async_setup_entry(
             "capacity remaining before regeneration",
             UnitOfVolume.GALLONS,
             "mdi:water-minus",
-            SensorDeviceClass.VOLUME,
+            SensorDeviceClass.VOLUME_STORAGE,
             SensorStateClass.MEASUREMENT,
         ),
         (
@@ -212,7 +212,7 @@ async def async_setup_entry(
             "total gallons softened since install",
             UnitOfVolume.GALLONS,
             "mdi:cup-water",
-            SensorDeviceClass.VOLUME_STORAGE,
+            SensorDeviceClass.WATER,
             SensorStateClass.TOTAL_INCREASING,
         ),
         (
@@ -252,7 +252,7 @@ async def async_setup_entry(
                 f"daily usage today - {day}d",
                 UnitOfVolume.GALLONS,
                 "mdi:cup-water",
-                None,
+                SensorDeviceClass.WATER,
                 SensorStateClass.MEASUREMENT,
             )]
         elif key[:3] == "avg" and key[-3:] in ["sun","mon","tue","wed","thr","fri","sat"]:
@@ -262,7 +262,7 @@ async def async_setup_entry(
                 f"average usage {day}",
                 UnitOfVolume.GALLONS,
                 "mdi:cup-water",
-                None,
+                SensorDeviceClass.WATER,
                 SensorStateClass.MEASUREMENT,
             )]
         elif key[:17] == "hourly_usage_hour":
@@ -272,7 +272,7 @@ async def async_setup_entry(
                 f"hourly usage now - {hour}h",
                 UnitOfVolume.GALLONS,
                 "mdi:cup-water",
-                None,
+                SensorDeviceClass.WATER,
                 SensorStateClass.MEASUREMENT,
             )]
         else:
@@ -367,13 +367,11 @@ class SoftenerSensor(CulliganBaseEntity):
         if self.io_culligan:
             BYPASS_PROPERTY   = PROPERTY_VALUE_MAP["actual_state_dealer_bypass"]
             VAC_MODE_PROPERTY = PROPERTY_VALUE_MAP["vacation_mode"]
-            #SENSOR_ID         = PROPERTY_VALUE_MAP[self._attr_sensor_id]
         else:
             BYPASS_PROPERTY   = "actual_state_dealer_bypass"
             VAC_MODE_PROPERTY = "vacation_mode"
-            #SENSOR_ID         = self._attr_sensor_id
 
-        if self._attr_sensor_id in ["status","unit_status_tank_1"]:
+        if SENSOR_ID in ["status","unit_status_tank_1"]:
             vacation = self.device.get_property_value(VAC_MODE_PROPERTY)
             bypass = self.device.get_property_value(BYPASS_PROPERTY)
             if vacation == 1 or vacation == 255:
@@ -386,6 +384,9 @@ class SoftenerSensor(CulliganBaseEntity):
                 state = "Softening"
                 self._attr_icon = "mdi:water"
             return state
+        elif SENSOR_ID == "current_flow_rate":
+            # need to divide by 10 to get current flow rate
+            return float(self.device.get_property_value(SENSOR_ID) / 10)
         else:
             return self.device.get_property_value(SENSOR_ID)
 

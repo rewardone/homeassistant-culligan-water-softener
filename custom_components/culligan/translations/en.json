@@ -6,8 +6,8 @@
                 "title": "Culligan account signin",
                 "description": "Sign into your Culligan account to access your devices.",
                 "data": {
-                    "username": "[%key:common::config_flow::data::username%]",
-                    "password": "[%key:common::config_flow::data::password%]",
+                    "username": "Username",
+                    "password": "Password",
                     "region": "Region",
                     "update_interval": "Update interval in seconds"
                 },
@@ -20,23 +20,23 @@
             },
             "reauth": {
                 "data": {
-                    "username": "[%key:common::config_flow::data::username%]",
-                    "password": "[%key:common::config_flow::data::password%]",
+                    "username": "Username",
+                    "password": "Password",
                     "region": "Region"
                 }
             }
         },
         "error": {
-            "cannot_connect": "[%key:common::config_flow::error::cannot_connect%]",
-            "invalid_auth": "[%key:common::config_flow::error::invalid_auth%]",
+            "cannot_connect": "Unable to connect.",
+            "invalid_auth": "Invalid authentication credentials.",
             "must_be_email": "The username field must be an email address.",
-            "unknown": "[%key:common::config_flow::error::unknown%]"
+            "unknown": "Something unknown happened."
         },
         "abort": {
-            "already_configured": "[%key:common::config_flow::abort::already_configured_account%]",
-            "cannot_connect": "[%key:common::config_flow::error::cannot_connect%]",
-            "reauth_successful": "[%key:common::config_flow::abort::reauth_successful%]",
-            "unknown": "[%key:common::config_flow::error::unknown%]"
+            "already_configured": "Account already set up!",
+            "cannot_connect": "Unable to connect.",
+            "reauth_successful": "Reauth successful.",
+            "unknown": "Something unknown happened."
         }
     },
     "options": {
