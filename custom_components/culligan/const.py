@@ -73,7 +73,7 @@ PROPERTY_VALUE_MAP = {
     "error_flags"               : "errors",
     "flow_profiles_max_flow"    : "flow_meter_high_flow_limit",
     "flow_profiles_min_flow"    : "flow_meter_low_flow_limit",
-    "flow_profile_R2_minutes"   : "",
+    "flow_profile_R1_minutes"   : "",
     "flow_profile_R2_minutes"   : "flow_profile_r2_minutes",
     "flow_profile_R3_minutes"   : "flow_profile_r3_minutes",
     "flow_profile_R4_minutes"   : "flow_profile_r4_minutes",

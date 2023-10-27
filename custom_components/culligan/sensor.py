@@ -343,14 +343,11 @@ class SoftenerSensor(CulliganBaseEntity, SensorEntity):
         self._attr_device_class: SensorDeviceClass  = device_class
         self._attr_icon                             = icon
         self._attr_native_unit_of_measurement       = unit_of_measurement
-        #self._attr_sensor_id                       = sensor_id             # this is the ayla property map key to get sensor data value
         self._attr_state_class:  SensorStateClass   = state_class
 
         self._attr_unique_id                        = device._device_serial_number + "_" + sensor_id
         self.entity_id                              = generate_entity_id("sensor.{}", self._attr_unique_id, None, coordinator.hass)
 
-        # self.io_culligan                            = isinstance(device, CulliganIoTDevice)
-        # if CulliganIoT device
         if self.io_culligan:
             self._attr_sensor_id                    = PROPERTY_VALUE_MAP[sensor_id]   # this is the mapped Culligan sensor data value
         else:
@@ -372,7 +369,7 @@ class SoftenerSensor(CulliganBaseEntity, SensorEntity):
             BYPASS_PROPERTY   = "actual_state_dealer_bypass"
             VAC_MODE_PROPERTY = "vacation_mode"
 
-        if SENSOR_ID in ["status","unit_status_tank_1"]:
+        if SENSOR_ID in ["status","unit_status_1","unit_status_tank_1"]:
             vacation = self.device.get_property_value(VAC_MODE_PROPERTY)
             bypass = self.device.get_property_value(BYPASS_PROPERTY)
             if vacation == 1 or vacation == 255:
@@ -387,7 +384,18 @@ class SoftenerSensor(CulliganBaseEntity, SensorEntity):
             return state
         elif SENSOR_ID == "current_flow_rate":
             # need to divide by 10 to get current flow rate
-            return float(self.device.get_property_value(SENSOR_ID) / 10)
+            LOGGER.debug(f"Attempting to get property value for: {SENSOR_ID} of len {len(SENSOR_ID)}")
+            flow_rate = self.device.get_property_value(SENSOR_ID)
+            LOGGER.debug(f"Got {flow_rate}")
+            if flow_rate:
+                flow_rate = int(flow_rate)
+                if flow_rate == 0:
+                    return float(flow_rate)
+                else:
+                    return float(flow_rate / 10)
+            else:
+                # LOGGER.debug("UNABLE TO GET FLOW_RATE")
+                return 0
         else:
             return self.device.get_property_value(SENSOR_ID)
 
