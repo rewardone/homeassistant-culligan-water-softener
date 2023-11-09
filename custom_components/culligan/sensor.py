@@ -339,6 +339,8 @@ class SoftenerSensor(CulliganBaseEntity, SensorEntity):
         """Initialize the sensor."""
         super().__init__(coordinator, device)
 
+        LOGGER.debug(f"Init for {description}")
+
         self._attr_description                      = description
         self._attr_device_class: SensorDeviceClass  = device_class
         self._attr_icon                             = icon
@@ -365,13 +367,16 @@ class SoftenerSensor(CulliganBaseEntity, SensorEntity):
         if self.io_culligan:
             BYPASS_PROPERTY   = PROPERTY_VALUE_MAP["actual_state_dealer_bypass"]
             VAC_MODE_PROPERTY = PROPERTY_VALUE_MAP["vacation_mode"]
+            LOGGER.debug(f"self is CULLIGAN")
         else:
             BYPASS_PROPERTY   = "actual_state_dealer_bypass"
             VAC_MODE_PROPERTY = "vacation_mode"
+            LOGGER.debug(f"self is AYLA")
 
         if SENSOR_ID in ["status","unit_status_1","unit_status_tank_1"]:
             vacation = self.device.get_property_value(VAC_MODE_PROPERTY)
             bypass = self.device.get_property_value(BYPASS_PROPERTY)
+            LOGGER.debug(f"For {SENSOR_ID} got: vac: {vacation} and bypass: {bypass} else: softening")
             if vacation == 1 or vacation == 255:
                 state = "Vacation"
                 self._attr_icon = "mdi:airplane"
@@ -386,7 +391,7 @@ class SoftenerSensor(CulliganBaseEntity, SensorEntity):
             # need to divide by 10 to get current flow rate
             LOGGER.debug(f"Attempting to get property value for: {SENSOR_ID} of len {len(SENSOR_ID)}")
             flow_rate = self.device.get_property_value(SENSOR_ID)
-            LOGGER.debug(f"Got {flow_rate}")
+            LOGGER.debug(f"For {SENSOR_ID} Got {flow_rate}")
             if flow_rate:
                 flow_rate = int(flow_rate)
                 if flow_rate == 0:
@@ -397,6 +402,7 @@ class SoftenerSensor(CulliganBaseEntity, SensorEntity):
                 # LOGGER.debug("UNABLE TO GET FLOW_RATE")
                 return 0
         else:
+            LOGGER.debug(f"For {SENSOR_ID} got: {self.device.get_property_value(SENSOR_ID)}")
             return self.device.get_property_value(SENSOR_ID)
 
     @property

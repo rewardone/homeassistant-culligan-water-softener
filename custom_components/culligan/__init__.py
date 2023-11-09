@@ -13,6 +13,8 @@ from .update_coordinator import CulliganUpdateCoordinator
 import asyncio
 import async_timeout
 
+from ayla_iot_unofficial.device import Softener
+
 from contextlib import suppress
 
 from culligan import (
