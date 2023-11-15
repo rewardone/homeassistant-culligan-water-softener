@@ -5,3 +5,11 @@ vacation_mode:
     entity:
       integration: culligan
       domain: switch
+
+bypass_mode:
+  name: "permanent bypass"
+  description: "Switch control for permanent bypass"
+  target:
+    entity:
+      integration: culligan
+      domain: switch

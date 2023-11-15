@@ -202,9 +202,9 @@ async def async_setup_entry(
             # time remaining in valve position
             "time_rem_in_position",
             "valve position time remaining",
-            None,  # FORMAT_DATETIME,
+            UnitOfTime.MINUTES,
             "mdi:clock-end",
-            None,  # SensorDeviceClass.TIMESTAMP,
+            None,
             SensorStateClass.MEASUREMENT,
         ),
         (
@@ -365,22 +365,26 @@ class SoftenerSensor(CulliganBaseEntity, SensorEntity):
         """Using devices stored property map, get the value from the dictionary"""
         SENSOR_ID             = self.sensor_id
         if self.io_culligan:
-            BYPASS_PROPERTY   = PROPERTY_VALUE_MAP["actual_state_dealer_bypass"]
+            #BYPASS_PROPERTY   = PROPERTY_VALUE_MAP["actual_state_dealer_bypass"]
+            BYPASS_PROPERTY   = PROPERTY_VALUE_MAP["standard_bypass"]
             VAC_MODE_PROPERTY = PROPERTY_VALUE_MAP["vacation_mode"]
             LOGGER.debug(f"self is CULLIGAN")
         else:
-            BYPASS_PROPERTY   = "actual_state_dealer_bypass"
+            #BYPASS_PROPERTY   = "actual_state_dealer_bypass"
+            BYPASS_PROPERTY   = "standard_bypass"
             VAC_MODE_PROPERTY = "vacation_mode"
             LOGGER.debug(f"self is AYLA")
+        VALVE_BYPASS_TIME     = "time_rem_in_position"
 
         if SENSOR_ID in ["status","unit_status_1","unit_status_tank_1"]:
-            vacation = self.device.get_property_value(VAC_MODE_PROPERTY)
-            bypass = self.device.get_property_value(BYPASS_PROPERTY)
+            vacation          = self.device.get_property_value(VAC_MODE_PROPERTY)
+            bypass            = self.device.get_property_value(BYPASS_PROPERTY)
+            bypass_time       = self.device.get_property_value(VALVE_BYPASS_TIME)
             LOGGER.debug(f"For {SENSOR_ID} got: vac: {vacation} and bypass: {bypass} else: softening")
             if vacation == 1 or vacation == 255:
                 state = "Vacation"
                 self._attr_icon = "mdi:airplane"
-            elif bypass == 1:
+            elif bypass in (True,1,2,3,4,5,6) or bypass_time > 0:
                 state = "Bypass"
                 self._attr_icon = "mdi:water-off"
             else:

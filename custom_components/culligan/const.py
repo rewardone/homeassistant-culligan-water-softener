@@ -30,7 +30,7 @@ CONF_ENABLED = "enabled"
 CULLIGAN_APP_ID = "OAhRjZjfBSwKLV8MTCjscAdoyJKzjxQW"
 
 # Platforms
-PLATFORMS = [Platform.BINARY_SENSOR, Platform.SENSOR, Platform.SWITCH]
+PLATFORMS = [Platform.BINARY_SENSOR, Platform.BUTTON, Platform.SENSOR, Platform.SWITCH]
 
 STARTUP_MESSAGE = f"""
 -------------------------------------------------------------------
@@ -45,6 +45,7 @@ If you have any issues with this you need to open an issue here:
 # key is Ayla property, value is culliganIoT property
 PROPERTY_VALUE_MAP = {
     "actual_state_dealer_bypass": "actual_state_dealer_bypass",        # no sensor created
+    "standard_bypass"           : "actual_state_dealer_bypass",        # unknown if correct mapping, but ayla uses this for bypass and CulIoT doesn't have it
     "aqua_sensor_Zmin"          : "aquasensor_z_min_tank_1",
     "aqua_sensor_Zratio_current": "aquasensor_z_ratio_current_tank_1",
     "away_mode_water_use"       : "away_mode_water_use",

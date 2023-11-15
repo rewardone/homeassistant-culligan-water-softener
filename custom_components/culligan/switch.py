@@ -20,17 +20,9 @@ from ayla_iot_unofficial.device import Device, Softener
 from collections.abc import Iterable
 from culligan.culliganiot_device import CulliganIoTDevice, CulliganIoTSoftener
 
-# ATTR_REVERT_TO_MODE = "revert_to_mode"
-# ATTR_SLEEP_MINUTES = "sleep_minutes"
-# SERVICE_SET_SLEEP_MODE = "set_sleep_mode"
-# SERVICE_SET_AWAY_MODE = "set_away_mode"
-# SERVICE_SET_HOME_MODE = "set_home_mode"
-# SERVICE_RUN_HEALTH_TEST = "run_health_test"
-
 AYLA_DEVICES = [Device, Softener]
 CULLIGAN_IOT_DEVICES = [CulliganIoTDevice, CulliganIoTSoftener]
 ALL_DEVICES = AYLA_DEVICES + CULLIGAN_IOT_DEVICES
-
 
 async def async_setup_entry(
     hass: HomeAssistant,
@@ -55,6 +47,14 @@ async def async_setup_entry(
             "vacation mode",
             "mdi:airplane",
             "mdi:airplane-off",
+            ALL_DEVICES,
+        ),
+        (
+            # Permanent bypass mode ('Gotcha', property name is 'set_standard_bypass', but ayla-iot-unofficial will 'clean' property name)
+            "standard_bypass",
+            "permanent bypass",
+            "mdi:valve-closed",
+            "mdi:valve-open",
             ALL_DEVICES,
         )
     ]
@@ -82,7 +82,7 @@ async def async_setup_entry(
     if len(switches) > 0:
         async_add_devices(switches)
 
-    LOGGER.debug("Finished sensor async_add_devices")
+    LOGGER.debug("Finished switch async_add_devices")
 
     # platform = entity_platform.async_get_current_platform()
 
@@ -144,7 +144,34 @@ class SoftenerSwitch(CulliganBaseEntity, SwitchEntity):
         self.entity_id                          = generate_entity_id("switch.{}", self._attr_unique_id, None, coordinator.hass)
 
         # init is_on
-        self._attr_is_on                        = bool(device.get_property_value(self._attr_sensor_id))
+        # Vac mode is 0 (off) or 1 (on)
+        # Bypass is 255 (off) or 1-6 (on) or false/true
+        self.on_values  = (True, 1, 2, 3, 4, 5, 6)
+        self.off_values = (False, 0, 255)
+        init_is_on      = device.get_property_value(self._attr_sensor_id)
+        bypass_time     = device.get_property_value("time_rem_in_position")
+        LOGGER.debug(f"Got: {init_is_on} for switch: {self.sensor_id}")
+        self._attr_is_on= None
+        if init_is_on in self.on_values or bypass_time > 0:
+            if self._attr_description == "permanent bypass":
+                if init_is_on == 6 or bypass_time == 255:
+                    self._attr_is_on = True
+                else:
+                    self._attr_is_on = False
+            elif self.sensor_id == "timed bypass":
+                if init_is_on in (1,2,3,4,5) or (bypass_time > 0 and bypass_time < 255):
+                    self._attr_is_on = True
+                else:
+                    self._attr_is_on = False
+            elif self.sensor_id in ("vacation_mode","away_mode"):
+                if init_is_on in self.on_values:
+                    self._attr_is_on = True
+                else:
+                    self._attr_is_on = False
+        else:
+            LOGGER.debug("Setting switch to FALSE")
+            self._attr_is_on = False
+        #self._attr_is_on                        = bool(device.get_property_value(self._attr_sensor_id))
 
     @property
     def sensor_id(self):
@@ -168,25 +195,64 @@ class SoftenerSwitch(CulliganBaseEntity, SwitchEntity):
         """Suggest the unique id of the entity. User never sees these."""
         return f"{self._attr_unique_id}"
 
+    # @property
+    # def is_on(self) -> bool | None:
+    #     """Return the bool of on"""
+    #     return f"{self._attr_is_on}"
+
+    def set_is_on(self) -> None:
+        """Set is_on based upon needed logic"""
+        init_is_on      = self.device.get_property_value(self.sensor_id)
+        bypass_time     = self.device.get_property_value("time_rem_in_position")
+        LOGGER.debug(f"Got: {init_is_on} for switch: {self.sensor_id} with desc: {self._attr_description}. bypass_time is: {bypass_time}")
+        if init_is_on in self.on_values or bypass_time > 0:
+            if self._attr_description == "permanent bypass":
+                if init_is_on == 6 or bypass_time == 255:
+                    self._attr_is_on = True
+                else:
+                    self._attr_is_on = False
+            elif self.sensor_id == "timed bypass":
+                if init_is_on in (1,2,3,4,5) or (bypass_time > 0 and bypass_time < 255):
+                    self._attr_is_on = True
+                else:
+                    self._attr_is_on = False
+            elif self.sensor_id in ("vacation_mode","away_mode"):
+                if init_is_on in self.on_values:
+                    self._attr_is_on = True
+                else:
+                    self._attr_is_on = False
+        else:
+            self._attr_is_on = False
+
     async def async_turn_on(self, **kwargs: Any) -> None:
         """Open the thing / turn on the thing"""
         LOGGER.debug(f"turning on: {self.sensor_id}")
         if self.sensor_id in ["vacation_mode","away_mode"]:
+            LOGGER.debug("Calling vacation/away")
             await self.device.async_start_vacation_mode() # device should be a property and set with BaseEntity
-            self._attr_is_on = bool(self.device.get_property_value(self.sensor_id))
-            self.async_write_ha_state()
+        elif self.sensor_id in ["standard_bypass"]:
+            LOGGER.debug("Calling bypass")
+            await self.device.async_start_bypass_mode() # device should be a property and set with BaseEntity
+        self.set_is_on()
+        self.async_write_ha_state()
 
     async def async_turn_off(self, **kwargs: Any) -> None:
         """Close the thing / turn off the thing."""
+        LOGGER.debug(f"turning off: {self.sensor_id}")
         if self.sensor_id in ["vacation_mode","away_mode"]:
+            LOGGER.debug("Calling vacation/away")
             await self.device.async_stop_vacation_mode() # device should be a property and set with BaseEntity
-            self._attr_is_on = bool(self.device.get_property_value(self.sensor_id))
-            self.async_write_ha_state()
+        elif self.sensor_id in ["standard_bypass"]:
+            LOGGER.debug("Calling bypass")
+            await self.device.async_stop_bypass_mode() # device should be a property and set with BaseEntity
+        self.set_is_on()
+        self.async_write_ha_state()
 
     @callback
     def async_update_state(self) -> None:
         """Retrieve the latest valve state and update the state machine."""
-        self._attr_is_on = bool(self.device.get_property_value(self.sensor_id))
+        #self._attr_is_on = bool(self.device.get_property_value(self.sensor_id))
+        self.set_is_on()
         self.async_write_ha_state()
 
     async def async_added_to_hass(self) -> None:
