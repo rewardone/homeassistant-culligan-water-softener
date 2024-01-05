@@ -121,7 +121,7 @@ async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> b
     for device in all_devices:
         if type(device) in SUPPORTED_DEVICE_CLASSES:
             LOGGER.debug(f"Adding supported device {device.name} of {type(device)}")
-            supported_devices += device
+            supported_devices += [device]
     
     # instance the data update coordinator with only supported_devices instead of all_devices
     LOGGER.debug(f"Setting coordinator with supported_devices: {supported_devices}")
