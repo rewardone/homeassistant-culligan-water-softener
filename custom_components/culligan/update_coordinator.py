@@ -186,9 +186,12 @@ class CulliganUpdateCoordinator(DataUpdateCoordinator[bool]):
         all_online_devices += await self.culligan_api.Ayla.async_list_devices()
         all_online_devices += (await self.culligan_api.async_get_device_registry())["data"]["devices"]
 
+        # self.culligan_devices is now only supported_devices as of 1.3.1, need another check here to not update 'online but not supported' devices
         temp = {}
+        SUPPORTED_DEVICE_CLASSES = [Softener, CulliganIoTSoftener]
         for device in all_online_devices:
             dsn = ""
+            # check DSN for Ayla, serialNumber for CulliganIoT
             if "dsn" in device.keys():
                 dsn = device["dsn"]
             elif "serialNumber" in device.keys():
@@ -196,12 +199,16 @@ class CulliganUpdateCoordinator(DataUpdateCoordinator[bool]):
             else:
                 LOGGER.debug(f"all_online_devices has no dsn or serialNumber property! {device}")
 
-            temp[dsn] = "online"
+            # if a dsn is online and matches the supported devices passed to the coordinator upon init, track it
+            if dsn in self.culligan_devices.keys():
+                temp[dsn] = "online"
+            elif type(device) in SUPPORTED_DEVICE_CLASSES:
+                LOGGER.debug(f"Device with DSN {dsn} is supported {type(device)}, but was not tracked for some reason.")
+            else:
+                LOGGER.debug(f"offline or unsupported device: {dsn}")
         LOGGER.debug(f"Added online DSNs to temp dict {temp}")
         self._online_dsns = temp.keys()
         LOGGER.debug(f"online_dsns is keys() {self.online_dsns}")
-
-        # self._online_dsns = all_online_devices
 
         if len(self.online_dsns) > 0:
             # Update all online devices
