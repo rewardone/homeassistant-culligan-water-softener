@@ -12,7 +12,7 @@ DOMAIN: Final = "culligan"
 DEFAULT_NAME = DOMAIN
 NAME = "Culligan"
 ISSUE_URL = "https://github.com/rewardone/homeassistant-culligan-water-softener/issues"
-VERSION = "1.0.0"
+VERSION = "1.3.3"
 
 # Polling
 API_TIMEOUT = 20
