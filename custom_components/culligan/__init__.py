@@ -156,8 +156,7 @@ async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> b
 
     LOGGER.debug("Calling forward_entry_setup")
     # might be replaced with setups ... https://developers.home-assistant.io/docs/config_entries_index/
-    for platform in PLATFORMS:
-        await hass.config_entries.async_forward_entry_setups(config_entry, platform)
+    await hass.config_entries.async_forward_entry_setups(config_entry, PLATFORMS)
 
     # HA docs signal updates
     config_entry.async_on_unload(config_entry.add_update_listener(async_update_options))
