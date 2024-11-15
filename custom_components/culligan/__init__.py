@@ -96,13 +96,16 @@ async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> b
             LOGGER.debug(f"    of type: {type(d)}")
 
     # get device registry from ayla
-    LOGGER.debug("Asking for devices from Ayla")
-    culligan_devices = await culligan_api.Ayla.async_get_devices()
-    device_names = ", ".join(d.name for d in culligan_devices)
-    LOGGER.debug("Found %d Ayla-connected Culligan device(s): %s", len(culligan_devices), device_names)
-    if len(culligan_devices) > 0:
-        for d in culligan_devices:
-            LOGGER.debug(f"    of type: {type(d)}")
+    if culligan_api.Ayla:
+        LOGGER.debug("Asking for devices from Ayla")
+        culligan_devices = await culligan_api.Ayla.async_get_devices()
+        device_names = ", ".join(d.name for d in culligan_devices)
+        LOGGER.debug("Found %d Ayla-connected Culligan device(s): %s", len(culligan_devices), device_names)
+        if len(culligan_devices) > 0:
+            for d in culligan_devices:
+                LOGGER.debug(f"    of type: {type(d)}")
+    else:
+        LOGGER.debug("No Ayla instance to query devices from")
 
     # combine the list of devices from both to all_devices
     if len(culliganiot_devices) > 0 and len(culligan_devices) > 0:
