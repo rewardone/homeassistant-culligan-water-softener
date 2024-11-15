@@ -110,9 +110,20 @@ async def validate_input(
             "An unknown error occurred. Check your region settings and open an issue on Github if the issue persists."
         ) from error
 
-    if culligan.Ayla is not None:
+    if culligan.Ayla:
         LOGGER.debug("Got Ayla instance, obtaining devices")
         devices = await culligan.Ayla.async_get_devices()
+
+        # Return info that you want to store in the config entry.
+        info = {
+            "title": "Culligan - %s" % data[CONF_USERNAME],
+            "dsn": ", ".join(d._dsn for d in devices),
+        }
+        LOGGER.debug(info)
+        return info
+    elif culligan.Ayla in (None,False):
+        LOGGER.debug("No Ayla instances, obtaining devices directly from Culligan only")
+        devices = await culligan.async_get_devices()
 
         # Return info that you want to store in the config entry.
         info = {
