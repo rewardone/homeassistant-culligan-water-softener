@@ -158,32 +158,36 @@ class CulliganUpdateCoordinator(DataUpdateCoordinator[bool]):
                 "Unexpected error updating Culligan devices.  Attempting re-auth"
             )
             raise UpdateFailed(err) from err
-        
-        # Check auth and refresh if needed of Ayla
-        try:
-            LOGGER.debug("checking Ayla auth token expiry")
-            if self.culligan_api.Ayla.token_expiring_soon:
-                await self.culligan_api.Ayla.async_refresh_auth()
-            elif datetime.now() > self.culligan_api.Ayla.auth_expiration - timedelta(
-                seconds=600
-            ):
-                await self.culligan_api.Ayla.async_refresh_auth()
-        except (
-            AylaAuthError,
-            AylaNotAuthedError,
-            AylaAuthExpiringError,
-        ) as err:
-            LOGGER.debug("Bad Ayla auth state.  Attempting re-auth", exc_info=err)
-            raise ConfigEntryAuthFailed from err
-        except Exception as err:
-            LOGGER.exception(
-                "Unexpected error updating Culligan devices.  Attempting re-auth"
-            )
-            raise UpdateFailed(err) from err
 
         # Check online devices
         all_online_devices = []
-        all_online_devices += await self.culligan_api.Ayla.async_list_devices()
+        
+        # Check auth and refresh if needed of Ayla
+        if self.culligan_api.Ayla:
+            try:
+                LOGGER.debug("checking Ayla auth token expiry")
+                if self.culligan_api.Ayla.token_expiring_soon:
+                    await self.culligan_api.Ayla.async_refresh_auth()
+                elif datetime.now() > self.culligan_api.Ayla.auth_expiration - timedelta(
+                    seconds=600
+                ):
+                    await self.culligan_api.Ayla.async_refresh_auth()
+                # Add online devices from Ayla
+                all_online_devices += await self.culligan_api.Ayla.async_list_devices()
+            except (
+                AylaAuthError,
+                AylaNotAuthedError,
+                AylaAuthExpiringError,
+            ) as err:
+                LOGGER.debug("Bad Ayla auth state.  Attempting re-auth", exc_info=err)
+                raise ConfigEntryAuthFailed from err
+            except Exception as err:
+                LOGGER.exception(
+                    "Unexpected error updating Culligan devices.  Attempting re-auth"
+                )
+                raise UpdateFailed(err) from err
+
+        # Add online devices from Culligan
         all_online_devices += (await self.culligan_api.async_get_device_registry())["data"]["devices"]
 
         # self.culligan_devices is now only supported_devices as of 1.3.1, need another check here to not update 'online but not supported' devices
