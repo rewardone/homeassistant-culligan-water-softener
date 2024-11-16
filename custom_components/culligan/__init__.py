@@ -108,15 +108,26 @@ async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> b
         LOGGER.debug("No Ayla instance to query devices from")
 
     # combine the list of devices from both to all_devices
-    if len(culliganiot_devices) > 0 and len(culligan_devices) > 0:
-        LOGGER.debug("Adding CulliganIoT and Ayla devices together")
-        all_devices = culliganiot_devices + culligan_devices
-    elif len(culliganiot_devices) > 0 and len(culligan_devices) < 1:
-        LOGGER.debug("Only found CulliganIoT devices")
-        all_devices = culliganiot_devices
-    elif len(culliganiot_devices) < 1 and len(culligan_devices) > 0:
-        LOGGER.debug("Only found Ayla-connected devices")
-        all_devices = culligan_devices
+    if culliganiot_devices and culligan_devices:
+        if len(culliganiot_devices) > 0 and len(culligan_devices) > 0:
+            LOGGER.debug("Adding CulliganIoT and Ayla devices together")
+            all_devices = culliganiot_devices + culligan_devices
+        elif len(culliganiot_devices) > 0 and len(culligan_devices) < 1:
+            LOGGER.debug("Only found CulliganIoT devices")
+            all_devices = culliganiot_devices
+        elif len(culliganiot_devices) < 1 and len(culligan_devices) > 0:
+            LOGGER.debug("Only found Ayla-connected devices")
+            all_devices = culligan_devices
+    elif culliganiot_devices:
+        if len(culliganiot_devices) > 0:
+            LOGGER.debug("Only found CulliganIoT devices and not culligan_devices")
+            all_devices = culliganiot_devices
+    elif culligan_devices:
+        if len(culligan_devices) > 0:
+            LOGGER.debug("Only found Ayla-connected devices and not culliganiot_devices")
+            all_devices = culligan_devices
+    else:
+        LOGGER.debug("Bad logic in devices selection")
 
     # separate devices from supported devices since processing unsupported devices results in too many errors
     SUPPORTED_DEVICE_CLASSES = [Softener, CulliganIoTSoftener]
