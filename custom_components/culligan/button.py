@@ -64,8 +64,8 @@ async def async_setup_entry(
             else:
                 LOGGER.debug(f"{button[0]} not supported for {type(device)}")
     
-    if len(buttons) > 0:
-        async_add_devices(buttons)
+        if len(buttons) > 0:
+            async_add_devices(buttons)
 
     LOGGER.debug("Finished button async_add_devices")
 
