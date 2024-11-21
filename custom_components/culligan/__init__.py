@@ -105,6 +105,7 @@ async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> b
             for d in culligan_devices:
                 LOGGER.debug(f"    of type: {type(d)}")
     else:
+        culligan_devices = False
         LOGGER.debug("No Ayla instance to query devices from")
 
     # combine the list of devices from both to all_devices
