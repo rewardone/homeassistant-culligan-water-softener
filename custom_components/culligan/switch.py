@@ -79,8 +79,8 @@ async def async_setup_entry(
             else:
                 LOGGER.debug(f"{switch[0]} not supported for {type(device)}")
     
-    if len(switches) > 0:
-        async_add_devices(switches)
+        if len(switches) > 0:
+            async_add_devices(switches)
 
     LOGGER.debug("Finished switch async_add_devices")
 
