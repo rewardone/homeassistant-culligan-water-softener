@@ -258,7 +258,7 @@ class CulliganOptionsFlowHandler(config_entries.OptionsFlow):
         self._errors = None
 
     @property
-    def config_entry(self)
+    def config_entry(self):
         return self.hass.config_entries.async_get_entry(self.handler)
 
     async def _show_options_form(self, user_input):  # pylint: disable=unused-argument
