@@ -247,7 +247,7 @@ class CulliganFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
     @callback
     def async_get_options_flow(config_entry: ConfigEntry) -> OptionsFlow:
         """Get/Enable options flow for this handler"""
-        return CulliganOptionsFlowHandler()
+        return CulliganOptionsFlowHandler(config_entry)
 
 
 class CulliganOptionsFlowHandler(config_entries.OptionsFlow):
