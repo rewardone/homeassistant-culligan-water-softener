@@ -30,7 +30,13 @@ CONF_ENABLED = "enabled"
 CULLIGAN_APP_ID = "OAhRjZjfBSwKLV8MTCjscAdoyJKzjxQW"
 
 # Platforms
-PLATFORMS = [Platform.BINARY_SENSOR, Platform.BUTTON, Platform.SENSOR, Platform.SWITCH]
+PLATFORMS = [Platform.BINARY_SENSOR, Platform.BUTTON, Platform.NUMBER, Platform.SENSOR, Platform.SWITCH]
+
+# Smart HE timed bypass dashboard control
+DEFAULT_TIMED_BYPASS_MINUTES = 60
+MIN_TIMED_BYPASS_MINUTES = 1
+MAX_TIMED_BYPASS_MINUTES = 90
+STEP_TIMED_BYPASS_MINUTES = 1
 
 STARTUP_MESSAGE = f"""
 -------------------------------------------------------------------
