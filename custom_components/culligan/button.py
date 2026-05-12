@@ -8,11 +8,19 @@ import voluptuous as vol
 from homeassistant.components.button import ButtonEntity
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant, callback
+from homeassistant.exceptions import HomeAssistantError
 # from homeassistant.helpers import entity_platform
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.entity import generate_entity_id
 
-from .const import DOMAIN, LOGGER, PROPERTY_VALUE_MAP
+from .const import (
+    DEFAULT_TIMED_BYPASS_MINUTES,
+    DOMAIN,
+    LOGGER,
+    MAX_TIMED_BYPASS_MINUTES,
+    MIN_TIMED_BYPASS_MINUTES,
+    PROPERTY_VALUE_MAP,
+)
 from .entity import CulliganBaseEntity
 from .update_coordinator import CulliganUpdateCoordinator
 
@@ -43,6 +51,11 @@ async def async_setup_entry(
             "clear bypass",
             "mdi:valve-open",
             ALL_DEVICES,
+        ),
+        (
+            "start timed bypass",
+            "mdi:timer-play-outline",
+            CULLIGAN_IOT_DEVICES,
         )
     ]
 
@@ -126,3 +139,23 @@ class SoftenerButton(CulliganBaseEntity, ButtonEntity):
         if self.sensor_id in ["clear bypass"]:
             LOGGER.debug("Pressing clear bypass")
             await self.device.async_stop_bypass_mode() # device should be a property and set with BaseEntity
+        elif self.sensor_id in ["start timed bypass"]:
+            duration_map = getattr(self.coordinator, "timed_bypass_minutes", {})
+            if not isinstance(duration_map, dict):
+                duration_map = {}
+            try:
+                minutes = int(duration_map.get(self.device.device_serial_number, DEFAULT_TIMED_BYPASS_MINUTES))
+            except (TypeError, ValueError):
+                minutes = DEFAULT_TIMED_BYPASS_MINUTES
+            minutes = max(MIN_TIMED_BYPASS_MINUTES, min(MAX_TIMED_BYPASS_MINUTES, minutes))
+            LOGGER.debug("Starting timed bypass for %s minutes", minutes)
+            payload = self.device.set_command_payload("bypass.timed.on", True, minutes)
+            async with await self.device.culligan_api.async_request(
+                "post",
+                self.device.command_endpoint,
+                json=payload,
+            ) as resp:
+                json_resp = await resp.json()
+            if json_resp.get("success") is not True:
+                raise HomeAssistantError(f"Culligan timed bypass command failed: {json_resp}")
+            await self.coordinator.async_request_refresh()
