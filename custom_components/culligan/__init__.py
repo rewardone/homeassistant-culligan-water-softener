@@ -14,7 +14,7 @@ import asyncio
 import async_timeout
 
 from ayla_iot_unofficial.device import Softener
-from culligan.culliganiot_device import CulliganIoTSoftener
+from culligan.culliganiot_device import CulliganIoTDevice, CulliganIoTSoftener
 
 from contextlib import suppress
 
@@ -130,8 +130,10 @@ async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> b
     else:
         LOGGER.debug("Bad logic in devices selection")
 
-    # separate devices from supported devices since processing unsupported devices results in too many errors
-    SUPPORTED_DEVICE_CLASSES = [Softener, CulliganIoTSoftener]
+    # separate devices from supported devices since processing unsupported devices results in too many errors.
+    # Generic CulliganIoTDevice support is read-only and lets non-softener devices, such as Smart RO,
+    # surface their cloud datapoints without requiring device-specific commands or property mappings.
+    SUPPORTED_DEVICE_CLASSES = [Softener, CulliganIoTSoftener, CulliganIoTDevice]
     supported_devices = []
     for device in all_devices:
         if type(device) in SUPPORTED_DEVICE_CLASSES:

@@ -68,7 +68,7 @@ class CulliganUpdateCoordinator(DataUpdateCoordinator[bool]):
         return dsn in self._online_dsns
 
     @staticmethod
-    async def _async_update_softener(softener: Softener | CulliganIoTSoftener) -> None:
+    async def _async_update_softener(softener: Softener | CulliganIoTDevice | CulliganIoTSoftener) -> None:
         """Asynchronously update the data for a single device."""
         dsn = softener.device_serial_number
         LOGGER.debug(
@@ -103,8 +103,8 @@ class CulliganUpdateCoordinator(DataUpdateCoordinator[bool]):
                     "batch_datapoint send failure, properties will not be accurate"
                 )
 
-        if isinstance(softener, CulliganIoTSoftener):
-            LOGGER.debug("updating culliganiot softener")
+        if isinstance(softener, CulliganIoTDevice):
+            LOGGER.debug("updating culliganiot device")
             async with timeout(API_TIMEOUT):
                 try:
                     LOGGER.debug("starting async_update")
@@ -192,7 +192,7 @@ class CulliganUpdateCoordinator(DataUpdateCoordinator[bool]):
 
         # self.culligan_devices is now only supported_devices as of 1.3.1, need another check here to not update 'online but not supported' devices
         temp = {}
-        SUPPORTED_DEVICE_CLASSES = [Softener, CulliganIoTSoftener]
+        SUPPORTED_DEVICE_CLASSES = [Softener, CulliganIoTSoftener, CulliganIoTDevice]
         for device in all_online_devices:
             dsn = ""
             # check DSN for Ayla, serialNumber for CulliganIoT

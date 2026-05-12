@@ -7,7 +7,9 @@ from .update_coordinator import CulliganUpdateCoordinator
 
 from ayla_iot_unofficial.device import Device
 from collections.abc import Iterable
-from culligan.culliganiot_device import CulliganIoTDevice
+from culligan.culliganiot_device import CulliganIoTDevice, CulliganIoTSoftener
+import hashlib
+import re
 
 from homeassistant.components.sensor import SensorDeviceClass, SensorEntity, SensorStateClass
 from homeassistant.config_entries import ConfigEntry
@@ -15,6 +17,7 @@ from homeassistant.const import (
     FORMAT_DATETIME,
     PERCENTAGE,
     SIGNAL_STRENGTH_DECIBELS_MILLIWATT,
+    EntityCategory,
     UnitOfMass,
     UnitOfTime,
     UnitOfVolume,
@@ -22,6 +25,42 @@ from homeassistant.const import (
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.entity import generate_entity_id
+
+
+def _slugify_datapoint_id(datapoint_id: str) -> str:
+    """Normalize a cloud datapoint name for HA unique IDs/entity IDs."""
+    return re.sub(r"_+", "_", re.sub(r"[^a-zA-Z0-9_]+", "_", datapoint_id)).strip("_").lower()
+
+
+def _describe_datapoint(datapoint_id: str) -> str:
+    """Turn a raw cloud datapoint name into a readable sensor name."""
+    return datapoint_id.replace("_", " ")
+
+
+def _coerce_datapoint_state(value):
+    """Return a Home Assistant-compatible scalar state for a raw datapoint value."""
+    if value is None:
+        return value
+    if isinstance(value, bool):
+        return str(value).lower()
+    if isinstance(value, (int, float)):
+        return value
+    if isinstance(value, str) and len(value) <= 255:
+        return value
+    return None
+
+
+def _get_datapoint_properties(device: CulliganIoTDevice) -> dict:
+    """Return a generic CulliganIoT device's datapoint dictionary if available."""
+    properties = getattr(device, "properties", {})
+    return properties if isinstance(properties, dict) else {}
+
+
+def _datapoint_unique_suffix(datapoint_id: str) -> str:
+    """Return a stable suffix that avoids collisions from slug normalization."""
+    slug = _slugify_datapoint_id(datapoint_id) or "datapoint"
+    digest = hashlib.sha1(datapoint_id.encode("utf-8")).hexdigest()[:8]
+    return f"{slug}_{digest}"
 
 
 async def async_setup_entry(
@@ -283,6 +322,26 @@ async def async_setup_entry(
     for device in devices:
         LOGGER.debug("Working on adding sensors device: %s", device._device_serial_number)
         sensors = []
+
+        # Non-softener CulliganIoT devices, such as Smart RO, do not have a known property map yet.
+        # Expose their returned datapoints read-only so users can discover what the API provides.
+        if isinstance(device, CulliganIoTDevice) and not isinstance(device, CulliganIoTSoftener):
+            for datapoint_id in sorted(_get_datapoint_properties(device).keys()):
+                LOGGER.debug("generic CulliganIoT sensor calling async_add: %s", datapoint_id)
+                sensors += [
+                    GenericCulliganIoTSensor(
+                        coordinator,
+                        device,
+                        datapoint_id,
+                    )
+                ]
+
+            if len(sensors) > 0:
+                async_add_devices(sensors)
+
+            LOGGER.debug("Finished generic CulliganIoT sensor async_add_devices")
+            continue
+
         for sensor in softener_sensors:
             LOGGER.debug("sensor calling async_add: %s", sensor[0])
             sensors += [
@@ -304,6 +363,61 @@ async def async_setup_entry(
             async_add_devices(sensors)
 
         LOGGER.debug("Finished sensor async_add_devices")
+
+
+class GenericCulliganIoTSensor(CulliganBaseEntity, SensorEntity):
+    """Read-only sensor for generic CulliganIoT device datapoints."""
+
+    has_entity_name = True
+    use_device_name = False
+
+    def __init__(
+        self,
+        coordinator: CulliganUpdateCoordinator,
+        device: CulliganIoTDevice,
+        datapoint_id: str,
+    ) -> None:
+        """Initialize the generic CulliganIoT datapoint sensor."""
+        super().__init__(coordinator, device)
+
+        self._attr_sensor_id = datapoint_id
+        self._attr_description = _describe_datapoint(datapoint_id)
+        self._attr_entity_category = EntityCategory.DIAGNOSTIC
+        self._attr_icon = "mdi:water-circle"
+        self._attr_unique_id = f"{device.device_serial_number}_{_datapoint_unique_suffix(datapoint_id)}"
+        self.entity_id = generate_entity_id("sensor.{}", self._attr_unique_id, None, coordinator.hass)
+
+    @property
+    def native_value(self):
+        """Return the raw datapoint value."""
+        return _coerce_datapoint_state(_get_datapoint_properties(self.device).get(self._attr_sensor_id))
+
+    @property
+    def extra_state_attributes(self):
+        """Expose metadata for raw generic datapoints."""
+        value = _get_datapoint_properties(self.device).get(self._attr_sensor_id)
+        attributes = {
+            "datapoint_id": self._attr_sensor_id,
+            "datapoint_type": type(value).__name__,
+        }
+        if _coerce_datapoint_state(value) is None and value is not None:
+            attributes["raw_value_preview"] = str(value)[:255]
+        return attributes
+
+    @property
+    def name(self) -> str | None:
+        """Define name as description. This shows in the Sensor Name column of entities."""
+        return self._attr_description
+
+    @property
+    def unique_id(self) -> str | None:
+        """Suggest the unique id of the entity. User never sees these."""
+        return self._attr_unique_id
+
+    @property
+    def icon(self) -> str | None:
+        """Define the icon."""
+        return self._attr_icon
 
 
 #class SoftenerSensor(CulliganWaterSoftenerEntity):
