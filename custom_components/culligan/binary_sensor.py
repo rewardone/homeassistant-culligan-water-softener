@@ -4,7 +4,7 @@ from .entity import CulliganBaseEntity
 from .update_coordinator import CulliganUpdateCoordinator
 from ayla_iot_unofficial.device import Device
 from collections.abc import Iterable
-from culligan.culliganiot_device import CulliganIoTDevice
+from culligan.culliganiot_device import CulliganIoTDevice, CulliganIoTSoftener
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.components.binary_sensor import BinarySensorDeviceClass, BinarySensorEntity
 from homeassistant.core import HomeAssistant
@@ -75,6 +75,13 @@ async def async_setup_entry(
     # Method two ... create individual sensors from a map of defined sensor attributes
     for device in devices:
         LOGGER.debug("Working on device: %s", device._device_serial_number)
+
+        # Generic CulliganIoT devices are exposed read-only from sensor.py only.
+        # Do not create softener-specific binary sensors for devices such as Smart RO.
+        if isinstance(device, CulliganIoTDevice) and not isinstance(device, CulliganIoTSoftener):
+            LOGGER.debug("Skipping softener binary sensors for generic CulliganIoT device: %s", device._device_serial_number)
+            continue
+
         binary_sensors = []
         for sensor in binary_sensor_config:
             LOGGER.debug("binary sensor calling async_add: %s", sensor[0])

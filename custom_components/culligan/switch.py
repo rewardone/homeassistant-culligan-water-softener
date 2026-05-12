@@ -20,8 +20,8 @@ from ayla_iot_unofficial.device import Device, Softener
 from collections.abc import Iterable
 from culligan.culliganiot_device import CulliganIoTDevice, CulliganIoTSoftener
 
-AYLA_DEVICES = [Device, Softener]
-CULLIGAN_IOT_DEVICES = [CulliganIoTDevice, CulliganIoTSoftener]
+AYLA_DEVICES = [Softener]
+CULLIGAN_IOT_DEVICES = [CulliganIoTSoftener]
 ALL_DEVICES = AYLA_DEVICES + CULLIGAN_IOT_DEVICES
 
 async def async_setup_entry(
