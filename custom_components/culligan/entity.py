@@ -22,19 +22,21 @@ class CulliganBaseEntity(CoordinatorEntity, Entity):
         # at a high level, we want to know if it's a culligan 'thing' or an ayla 'thing'
         self._io_culligan    = isinstance(device, CulliganIoTDevice)
 
-        # if culligan iot, but not classified as 'softener' ... expect things to break
+        # Generic CulliganIoTDevice entities are supported as read-only datapoint sensors.
+        # Device-specific controls still belong on explicit subclasses such as CulliganIoTSoftener.
         if self._io_culligan and not isinstance(device, CulliganIoTSoftener):
-            LOGGER.warning(f"Device {device.device_serial_number} is a CulliganIoT device, but was not cast as a CulliganIoTSoftener. Expect things to break!")
+            LOGGER.debug("Device %s is a generic CulliganIoT device", device.device_serial_number)
         
         # Similar, if Ayla, but not classified as 'softener' ... expect things to break
         if not self._io_culligan and not isinstance(device, Softener):
             LOGGER.warning(f"Device {device.device_serial_number} is an Ayla device, but was not cast as a Softener. Expect things to break!")
 
         # self.base_unique_id = device.name + "_" + device.device_serial_number
+        model = getattr(self.device, "device_model_number", None) or getattr(self.device, "_model", None)
         self._attr_device_info = DeviceInfo(
             identifiers={(DOMAIN, self.device.device_serial_number)},
             manufacturer="Culligan",
-            model=f"{self.device.name + ' ' + self.device.device_model_number}",
+            model=" ".join(part for part in [self.device.name, model] if part),
             name=self.device.name
         )
 

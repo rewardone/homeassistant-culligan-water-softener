@@ -7,7 +7,8 @@ from .update_coordinator import CulliganUpdateCoordinator
 
 from ayla_iot_unofficial.device import Device
 from collections.abc import Iterable
-from culligan.culliganiot_device import CulliganIoTDevice
+from culligan.culliganiot_device import CulliganIoTDevice, CulliganIoTSoftener
+import re
 
 from homeassistant.components.sensor import SensorDeviceClass, SensorEntity, SensorStateClass
 from homeassistant.config_entries import ConfigEntry
@@ -22,6 +23,16 @@ from homeassistant.const import (
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.entity import generate_entity_id
+
+
+def _slugify_datapoint_id(datapoint_id: str) -> str:
+    """Normalize a cloud datapoint name for HA unique IDs/entity IDs."""
+    return re.sub(r"_+", "_", re.sub(r"[^a-zA-Z0-9_]+", "_", datapoint_id)).strip("_").lower()
+
+
+def _describe_datapoint(datapoint_id: str) -> str:
+    """Turn a raw cloud datapoint name into a readable sensor name."""
+    return datapoint_id.replace("_", " ")
 
 
 async def async_setup_entry(
@@ -283,6 +294,26 @@ async def async_setup_entry(
     for device in devices:
         LOGGER.debug("Working on adding sensors device: %s", device._device_serial_number)
         sensors = []
+
+        # Non-softener CulliganIoT devices, such as Smart RO, do not have a known property map yet.
+        # Expose their returned datapoints read-only so users can discover what the API provides.
+        if isinstance(device, CulliganIoTDevice) and not isinstance(device, CulliganIoTSoftener):
+            for datapoint_id in sorted(device.properties.keys()):
+                LOGGER.debug("generic CulliganIoT sensor calling async_add: %s", datapoint_id)
+                sensors += [
+                    GenericCulliganIoTSensor(
+                        coordinator,
+                        device,
+                        datapoint_id,
+                    )
+                ]
+
+            if len(sensors) > 0:
+                async_add_devices(sensors)
+
+            LOGGER.debug("Finished generic CulliganIoT sensor async_add_devices")
+            continue
+
         for sensor in softener_sensors:
             LOGGER.debug("sensor calling async_add: %s", sensor[0])
             sensors += [
@@ -304,6 +335,49 @@ async def async_setup_entry(
             async_add_devices(sensors)
 
         LOGGER.debug("Finished sensor async_add_devices")
+
+
+class GenericCulliganIoTSensor(CulliganBaseEntity, SensorEntity):
+    """Read-only sensor for generic CulliganIoT device datapoints."""
+
+    has_entity_name = True
+    use_device_name = False
+
+    def __init__(
+        self,
+        coordinator: CulliganUpdateCoordinator,
+        device: CulliganIoTDevice,
+        datapoint_id: str,
+    ) -> None:
+        """Initialize the generic CulliganIoT datapoint sensor."""
+        super().__init__(coordinator, device)
+
+        self._attr_sensor_id = datapoint_id
+        self._attr_description = _describe_datapoint(datapoint_id)
+        self._attr_icon = "mdi:water-circle"
+        slug = _slugify_datapoint_id(datapoint_id)
+        self._attr_unique_id = f"{device.device_serial_number}_{slug}"
+        self.entity_id = generate_entity_id("sensor.{}", self._attr_unique_id, None, coordinator.hass)
+
+    @property
+    def native_value(self):
+        """Return the raw datapoint value."""
+        return self.device.get_property_value(self._attr_sensor_id)
+
+    @property
+    def name(self) -> str | None:
+        """Define name as description. This shows in the Sensor Name column of entities."""
+        return self._attr_description
+
+    @property
+    def unique_id(self) -> str | None:
+        """Suggest the unique id of the entity. User never sees these."""
+        return self._attr_unique_id
+
+    @property
+    def icon(self) -> str | None:
+        """Define the icon."""
+        return self._attr_icon
 
 
 #class SoftenerSensor(CulliganWaterSoftenerEntity):
