@@ -2,7 +2,7 @@
 from .const import DOMAIN, LOGGER
 from .update_coordinator import CulliganUpdateCoordinator
 from ayla_iot_unofficial.device import Device, Softener
-from culligan.culliganiot_device import CulliganIoTDevice, CulliganIoTSoftener
+from culligan.culliganiot_device import CulliganIoTDevice, CulliganIoTRO, CulliganIoTSoftener
 from homeassistant.helpers.entity import DeviceInfo, Entity
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
@@ -22,10 +22,10 @@ class CulliganBaseEntity(CoordinatorEntity, Entity):
         # at a high level, we want to know if it's a culligan 'thing' or an ayla 'thing'
         self._io_culligan    = isinstance(device, CulliganIoTDevice)
 
-        # Generic CulliganIoTDevice entities are supported as read-only datapoint sensors.
+        # CulliganIoTRO entities are supported as read-only datapoint sensors.
         # Device-specific controls still belong on explicit subclasses such as CulliganIoTSoftener.
-        if self._io_culligan and not isinstance(device, CulliganIoTSoftener):
-            LOGGER.debug("Device %s is a generic CulliganIoT device", device.device_serial_number)
+        if isinstance(device, CulliganIoTRO):
+            LOGGER.debug("Device %s is a Smart RO CulliganIoT device", device.device_serial_number)
         
         # Similar, if Ayla, but not classified as 'softener' ... expect things to break
         if not self._io_culligan and not isinstance(device, Softener):

@@ -9,7 +9,7 @@ from ayla_iot_unofficial.device import Device, Softener
 from ayla_iot_unofficial import AylaAuthError, AylaNotAuthedError, AylaAuthExpiringError
 from culligan import CulliganApi
 from culligan.exc import CulliganAuthError, CulliganNotAuthedError, CulliganAuthExpiringError
-from culligan.culliganiot_device import CulliganIoTDevice, CulliganIoTSoftener
+from culligan.culliganiot_device import CulliganIoTDevice, CulliganIoTRO, CulliganIoTSoftener
 
 from datetime import datetime, timedelta
 
@@ -27,7 +27,7 @@ class CulliganUpdateCoordinator(DataUpdateCoordinator[bool]):
         hass: HomeAssistant,
         config_entry: ConfigEntry,
         culligan_api: CulliganApi,
-        culligan_devices: list[Softener] | list[Device] | list[CulliganIoTDevice] | list[CulliganIoTSoftener],
+        culligan_devices: list[Softener] | list[Device] | list[CulliganIoTRO] | list[CulliganIoTSoftener],
     ) -> None:
         """Set up the CulliganUpdateCoordinator class."""
         LOGGER.debug("coordinator init")
@@ -68,7 +68,7 @@ class CulliganUpdateCoordinator(DataUpdateCoordinator[bool]):
         return dsn in self._online_dsns
 
     @staticmethod
-    async def _async_update_softener(softener: Softener | CulliganIoTDevice | CulliganIoTSoftener) -> None:
+    async def _async_update_softener(softener: Softener | CulliganIoTRO | CulliganIoTSoftener) -> None:
         """Asynchronously update the data for a single device."""
         dsn = softener.device_serial_number
         LOGGER.debug(
@@ -192,7 +192,7 @@ class CulliganUpdateCoordinator(DataUpdateCoordinator[bool]):
 
         # self.culligan_devices is now only supported_devices as of 1.3.1, need another check here to not update 'online but not supported' devices
         temp = {}
-        SUPPORTED_DEVICE_CLASSES = [Softener, CulliganIoTSoftener, CulliganIoTDevice]
+        SUPPORTED_DEVICE_CLASSES = [Softener, CulliganIoTSoftener, CulliganIoTRO]
         for device in all_online_devices:
             dsn = ""
             # check DSN for Ayla, serialNumber for CulliganIoT
