@@ -230,7 +230,8 @@ class SoftenerSwitch(CulliganBaseEntity, SwitchEntity):
         if self.sensor_id in ["vacation_mode","away_mode"]:
             LOGGER.debug("Calling vacation/away")
             await self.device.async_start_vacation_mode() # device should be a property and set with BaseEntity
-        elif self.sensor_id in ["standard_bypass"]:
+        elif self.sensor_id in ["standard_bypass","actual_state_dealer_bypass"]:
+            # Shouldn't need both ids in the check, the mapper should translate it, but better to be safe than sorry?
             LOGGER.debug("Calling bypass")
             await self.device.async_start_bypass_mode() # device should be a property and set with BaseEntity
         self.set_is_on()
@@ -242,7 +243,8 @@ class SoftenerSwitch(CulliganBaseEntity, SwitchEntity):
         if self.sensor_id in ["vacation_mode","away_mode"]:
             LOGGER.debug("Calling vacation/away")
             await self.device.async_stop_vacation_mode() # device should be a property and set with BaseEntity
-        elif self.sensor_id in ["standard_bypass"]:
+        elif self.sensor_id in ["standard_bypass","actual_state_dealer_bypass"]:
+            # Shouldn't need both ids in the check, the mapper should translate it, but better to be safe than sorry?
             LOGGER.debug("Calling bypass")
             await self.device.async_stop_bypass_mode() # device should be a property and set with BaseEntity
         self.set_is_on()
