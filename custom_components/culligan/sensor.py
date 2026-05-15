@@ -7,7 +7,7 @@ from .update_coordinator import CulliganUpdateCoordinator
 
 from ayla_iot_unofficial.device import Device
 from collections.abc import Iterable
-from culligan.culliganiot_device import CulliganIoTDevice, CulliganIoTSoftener
+from culligan.culliganiot_device import CulliganIoTDevice, CulliganIoTRO, CulliganIoTSoftener
 import hashlib
 import re
 
@@ -323,13 +323,13 @@ async def async_setup_entry(
         LOGGER.debug("Working on adding sensors device: %s", device._device_serial_number)
         sensors = []
 
-        # Non-softener CulliganIoT devices, such as Smart RO, do not have a known property map yet.
+        # Smart RO devices do not have a Home Assistant property map yet.
         # Expose their returned datapoints read-only so users can discover what the API provides.
-        if isinstance(device, CulliganIoTDevice) and not isinstance(device, CulliganIoTSoftener):
+        if isinstance(device, CulliganIoTRO):
             for datapoint_id in sorted(_get_datapoint_properties(device).keys()):
-                LOGGER.debug("generic CulliganIoT sensor calling async_add: %s", datapoint_id)
+                LOGGER.debug("Smart RO datapoint sensor calling async_add: %s", datapoint_id)
                 sensors += [
-                    GenericCulliganIoTSensor(
+                    CulliganIoTROSensor(
                         coordinator,
                         device,
                         datapoint_id,
@@ -339,7 +339,7 @@ async def async_setup_entry(
             if len(sensors) > 0:
                 async_add_devices(sensors)
 
-            LOGGER.debug("Finished generic CulliganIoT sensor async_add_devices")
+            LOGGER.debug("Finished Smart RO datapoint sensor async_add_devices")
             continue
 
         for sensor in softener_sensors:
@@ -365,8 +365,8 @@ async def async_setup_entry(
         LOGGER.debug("Finished sensor async_add_devices")
 
 
-class GenericCulliganIoTSensor(CulliganBaseEntity, SensorEntity):
-    """Read-only sensor for generic CulliganIoT device datapoints."""
+class CulliganIoTROSensor(CulliganBaseEntity, SensorEntity):
+    """Read-only sensor for Smart RO CulliganIoT device datapoints."""
 
     has_entity_name = True
     use_device_name = False
@@ -374,10 +374,10 @@ class GenericCulliganIoTSensor(CulliganBaseEntity, SensorEntity):
     def __init__(
         self,
         coordinator: CulliganUpdateCoordinator,
-        device: CulliganIoTDevice,
+        device: CulliganIoTRO,
         datapoint_id: str,
     ) -> None:
-        """Initialize the generic CulliganIoT datapoint sensor."""
+        """Initialize the Smart RO datapoint sensor."""
         super().__init__(coordinator, device)
 
         self._attr_sensor_id = datapoint_id
@@ -394,7 +394,7 @@ class GenericCulliganIoTSensor(CulliganBaseEntity, SensorEntity):
 
     @property
     def extra_state_attributes(self):
-        """Expose metadata for raw generic datapoints."""
+        """Expose metadata for raw Smart RO datapoints."""
         value = _get_datapoint_properties(self.device).get(self._attr_sensor_id)
         attributes = {
             "datapoint_id": self._attr_sensor_id,
