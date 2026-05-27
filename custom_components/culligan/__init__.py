@@ -14,7 +14,7 @@ import asyncio
 import async_timeout
 
 from ayla_iot_unofficial.device import Softener
-from culligan.culliganiot_device import CulliganIoTRO, CulliganIoTSoftener
+from culligan.culliganiot_device import CulliganIoTDevice, CulliganIoTRO, CulliganIoTSoftener
 
 from contextlib import suppress
 
@@ -34,6 +34,48 @@ from homeassistant.helpers.aiohttp_client import async_get_clientsession
 
 class CannotConnect(HomeAssistantError):
     """Error to indicate we cannot connect."""
+
+
+def _looks_like_culligan_iot_softener(device: dict) -> bool:
+    """Return true when a CulliganIoT registry entry appears to be a softener."""
+    name = str(device.get("name", "")).casefold()
+    model = str(device.get("model", "")).casefold()
+    serial_number = str(device.get("serialNumber", "")).casefold()
+
+    return (
+        name in {"smart he", "smart modernity"}
+        or "softener" in name
+        or "smart he" in name
+        or "modernity" in name
+        or "softener" in model
+        or model.startswith("gbx")
+        or serial_number.startswith("gbx")
+    )
+
+
+def _looks_like_culligan_iot_ro(device: dict) -> bool:
+    """Return true when a CulliganIoT registry entry appears to be a Smart RO."""
+    name = str(device.get("name", "")).casefold()
+    model = str(device.get("model", "")).casefold()
+    serial_number = str(device.get("serialNumber", "")).casefold()
+
+    return (
+        "smart ro" in name
+        or "reverse osmosis" in name
+        or model.startswith("sro")
+        or serial_number.startswith("sro")
+    )
+
+
+def _culligan_iot_device_from_registry(
+    culligan_api: CulliganApi, device: dict
+) -> CulliganIoTDevice:
+    """Build a CulliganIoT device class using local softener detection."""
+    if _looks_like_culligan_iot_softener(device):
+        return CulliganIoTSoftener(culligan_api, device)
+    if _looks_like_culligan_iot_ro(device):
+        return CulliganIoTRO(culligan_api, device)
+    return CulliganIoTDevice(culligan_api, device)
 
 
 async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> bool:
@@ -86,9 +128,14 @@ async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> b
     except CannotConnect as exc:
         raise ConfigEntryNotReady from exc
     
-    # get device registry from Culligan
+    # get device registry from Culligan. Build classes locally because the upstream
+    # helper only recognizes a narrow set of softener names.
     LOGGER.debug("Asking for devices from Culligan")
-    culliganiot_devices = await culligan_api.async_get_devices()
+    culliganiot_registry = await culligan_api.async_get_device_registry()
+    culliganiot_devices = [
+        _culligan_iot_device_from_registry(culligan_api, device)
+        for device in culliganiot_registry.get("data", {}).get("devices", [])
+    ]
     device_names = ", ".join(d.name for d in culliganiot_devices)
     LOGGER.debug("Found %d Culligan device(s): %s", len(culliganiot_devices), device_names)
     if len(culliganiot_devices) > 0:
