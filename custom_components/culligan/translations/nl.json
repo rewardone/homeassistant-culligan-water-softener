@@ -1,0 +1,77 @@
+{
+    "config": {
+        "flow_title": "Culligan-account toevoegen",
+        "step": {
+            "user": {
+                "title": "Aanmelden bij Culligan-account",
+                "description": "Meld u aan bij uw Culligan-account om toegang te krijgen tot uw apparaten.",
+                "data": {
+                    "username": "Gebruikersnaam",
+                    "password": "Wachtwoord",
+                    "region": "Regio",
+                    "update_interval": "Update-interval in seconden",
+                    "unit_system": "Eenheden"
+                },
+                "data_description": {
+                    "username": "Culligan e-mailadres.",
+                    "password": "Wachtwoord van het Culligan-account.",
+                    "region": "Ayla gebruikt andere diensten in de EU. Selecteer uw regio om verbinding te maken met de juiste dienst.",
+                    "update_interval": "Interval voor gegevensupdates in seconden.",
+                    "unit_system": "Weergave-eenheden voor waterverbruik- en zoutsensoren."
+                }
+            },
+            "reauth": {
+                "data": {
+                    "username": "Gebruikersnaam",
+                    "password": "Wachtwoord",
+                    "region": "Regio"
+                }
+            }
+        },
+        "error": {
+            "cannot_connect": "Kan geen verbinding maken.",
+            "invalid_auth": "Ongeldige inloggegevens.",
+            "must_be_email": "De gebruikersnaam moet een e-mailadres zijn.",
+            "unknown": "Er is een onbekende fout opgetreden."
+        },
+        "abort": {
+            "already_configured": "Account al ingesteld!",
+            "cannot_connect": "Kan geen verbinding maken.",
+            "reauth_successful": "Herauthenticatie geslaagd.",
+            "unknown": "Er is een onbekende fout opgetreden."
+        }
+    },
+    "options": {
+        "step": {
+            "init": {
+                "title": "Opties beheren",
+                "description": "Instellingen beheren of wijzigen.",
+                "data": {
+                    "update_interval": "Update-interval in seconden",
+                    "unit_system": "Eenheden"
+                },
+                "data_description": {
+                    "update_interval": "Interval voor gegevensupdates in seconden.",
+                    "unit_system": "Weergave-eenheden voor waterverbruik- en zoutsensoren."
+                }
+            }
+        },
+        "error": {
+            "invalid": "Niet ondersteund"
+        }
+    },
+    "selector": {
+        "region": {
+            "options": {
+                "europe": "Europa",
+                "elsewhere": "Rest van de wereld"
+            }
+        },
+        "unit_system": {
+            "options": {
+                "imperial": "Imperiaal (gallons, ponden)",
+                "metric": "Metrisch (liters, kilogrammen)"
+            }
+        }
+    }
+}
