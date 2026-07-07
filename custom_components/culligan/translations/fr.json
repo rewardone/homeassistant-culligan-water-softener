@@ -1,0 +1,77 @@
+{
+    "config": {
+        "flow_title": "Ajouter un compte Culligan",
+        "step": {
+            "user": {
+                "title": "Connexion au compte Culligan",
+                "description": "Connectez-vous à votre compte Culligan pour accéder à vos appareils.",
+                "data": {
+                    "username": "Nom d'utilisateur",
+                    "password": "Mot de passe",
+                    "region": "Région",
+                    "update_interval": "Intervalle de mise à jour en secondes",
+                    "unit_system": "Unités"
+                },
+                "data_description": {
+                    "username": "Adresse e-mail Culligan.",
+                    "password": "Mot de passe du compte Culligan.",
+                    "region": "Ayla utilise des services différents dans l'UE. Sélectionnez votre région pour vous connecter au bon service.",
+                    "update_interval": "Intervalle de mise à jour des données en secondes.",
+                    "unit_system": "Unités d'affichage pour les capteurs de consommation d'eau et de sel."
+                }
+            },
+            "reauth": {
+                "data": {
+                    "username": "Nom d'utilisateur",
+                    "password": "Mot de passe",
+                    "region": "Région"
+                }
+            }
+        },
+        "error": {
+            "cannot_connect": "Connexion impossible.",
+            "invalid_auth": "Identifiants invalides.",
+            "must_be_email": "Le nom d'utilisateur doit être une adresse e-mail.",
+            "unknown": "Une erreur inconnue s'est produite."
+        },
+        "abort": {
+            "already_configured": "Compte déjà configuré !",
+            "cannot_connect": "Connexion impossible.",
+            "reauth_successful": "Réauthentification réussie.",
+            "unknown": "Une erreur inconnue s'est produite."
+        }
+    },
+    "options": {
+        "step": {
+            "init": {
+                "title": "Gérer les options",
+                "description": "Gérer ou modifier les paramètres.",
+                "data": {
+                    "update_interval": "Intervalle de mise à jour en secondes",
+                    "unit_system": "Unités"
+                },
+                "data_description": {
+                    "update_interval": "Intervalle de mise à jour des données en secondes.",
+                    "unit_system": "Unités d'affichage pour les capteurs de consommation d'eau et de sel."
+                }
+            }
+        },
+        "error": {
+            "invalid": "Non pris en charge"
+        }
+    },
+    "selector": {
+        "region": {
+            "options": {
+                "europe": "Europe",
+                "elsewhere": "Reste du monde"
+            }
+        },
+        "unit_system": {
+            "options": {
+                "imperial": "Impérial (gallons, livres)",
+                "metric": "Métrique (litres, kilogrammes)"
+            }
+        }
+    }
+}

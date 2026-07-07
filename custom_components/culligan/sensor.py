@@ -1,7 +1,14 @@
 """Culligan Sensor Entities."""
 from __future__ import annotations
 
-from .const import DOMAIN, LOGGER, PROPERTY_VALUE_MAP
+from .const import (
+    CONF_UNIT_SYSTEM,
+    DOMAIN,
+    LOGGER,
+    PROPERTY_VALUE_MAP,
+    UNIT_SYSTEM_IMPERIAL,
+    UNIT_SYSTEM_METRIC,
+)
 from .entity import CulliganBaseEntity
 from .update_coordinator import CulliganUpdateCoordinator
 
@@ -21,6 +28,7 @@ from homeassistant.const import (
     UnitOfMass,
     UnitOfTime,
     UnitOfVolume,
+    UnitOfVolumeFlowRate,
 )
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
@@ -73,6 +81,19 @@ async def async_setup_entry(
 
     # coordinator: CulliganUpdateCoordinator = hass.data[DOMAIN][config_entry.entry_id]
     coordinator: CulliganUpdateCoordinator = hass.data[DOMAIN][config_entry.entry_id]["coordinator"]
+
+    user_input = config_entry.data.get("user_input", {})
+    unit_system = config_entry.options.get(
+        CONF_UNIT_SYSTEM, user_input.get(CONF_UNIT_SYSTEM, UNIT_SYSTEM_IMPERIAL)
+    )
+    # Native units stay imperial (what the API reports); HA converts for display.
+    metric_unit_map = {
+        UnitOfVolume.GALLONS: UnitOfVolume.LITERS,
+        UnitOfMass.POUNDS: UnitOfMass.KILOGRAMS,
+        UnitOfVolumeFlowRate.GALLONS_PER_MINUTE: UnitOfVolumeFlowRate.LITERS_PER_MINUTE,
+    }
+    suggested_unit_map = metric_unit_map if unit_system == UNIT_SYSTEM_METRIC else {}
+
     devices: Iterable[Device] | Iterable[CulliganIoTDevice] = coordinator.culligan_devices.values()
     device_names = [d.name for d in devices]
     LOGGER.debug(
@@ -94,7 +115,7 @@ async def async_setup_entry(
         (
             # total gallons today
             "total_gallons_today",
-            "total gallons today",
+            "total water usage today",
             UnitOfVolume.GALLONS,
             "mdi:water-circle",
             SensorDeviceClass.WATER,
@@ -123,9 +144,9 @@ async def async_setup_entry(
             # current flow rate
             "current_flow_rate",
             "current flow rate",
-            "gpm",
+            UnitOfVolumeFlowRate.GALLONS_PER_MINUTE,
             "mdi:waves",
-            SensorDeviceClass.WATER,
+            SensorDeviceClass.VOLUME_FLOW_RATE,
             SensorStateClass.MEASUREMENT,
         ),
         (
@@ -249,7 +270,7 @@ async def async_setup_entry(
         (
             # Total gallons softened since install
             "total_gallons_since_install",
-            "total gallons softened since install",
+            "total water softened since install",
             UnitOfVolume.GALLONS,
             "mdi:cup-water",
             SensorDeviceClass.WATER,
@@ -355,6 +376,7 @@ async def async_setup_entry(
                     sensor[3],  # icon
                     sensor[4],  # device class
                     sensor[5],  # state class
+                    suggested_unit_map.get(sensor[2]),  # display unit (None = native)
                 )
             ]
 
@@ -449,6 +471,7 @@ class SoftenerSensor(CulliganBaseEntity, SensorEntity):
         icon: str,
         device_class: SensorDeviceClass,
         state_class: SensorStateClass | None,
+        suggested_unit_of_measurement: str | None = None,
     ) -> None:
         """Initialize the sensor."""
         super().__init__(coordinator, device)
@@ -460,6 +483,8 @@ class SoftenerSensor(CulliganBaseEntity, SensorEntity):
         self._attr_icon                             = icon
         self._attr_native_unit_of_measurement       = unit_of_measurement
         self._attr_state_class:  SensorStateClass   = state_class
+        if suggested_unit_of_measurement is not None:
+            self._attr_suggested_unit_of_measurement = suggested_unit_of_measurement
 
         self._attr_unique_id                        = device._device_serial_number + "_" + sensor_id
         self.entity_id                              = generate_entity_id("sensor.{}", self._attr_unique_id, None, coordinator.hass)
@@ -475,7 +500,7 @@ class SoftenerSensor(CulliganBaseEntity, SensorEntity):
         return self._attr_sensor_id
 
     @property
-    def state(self) -> int | None:
+    def native_value(self) -> int | str | float | None:
         """Using devices stored property map, get the value from the dictionary"""
         SENSOR_ID             = self.sensor_id
         if self.io_culligan:
@@ -522,11 +547,6 @@ class SoftenerSensor(CulliganBaseEntity, SensorEntity):
         else:
             LOGGER.debug(f"For {SENSOR_ID} got: {self.device.get_property_value(SENSOR_ID)}")
             return self.device.get_property_value(SENSOR_ID)
-
-    @property
-    def unit_of_measurement(self) -> str | None:
-        """Define unit of measurement"""
-        return self._attr_native_unit_of_measurement
 
     @property
     def icon(self) -> str | None:

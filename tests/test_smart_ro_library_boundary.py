@@ -36,4 +36,4 @@ def test_update_coordinator_tracks_ro_as_supported_without_generic_iot_support()
 def test_manifest_pins_culligan_library_version_with_ro_class():
     manifest_json = _read("custom_components/culligan/manifest.json")
 
-    assert '"culligan==1.1.6"' in manifest_json
+    assert '"culligan==1.1.8"' in manifest_json
