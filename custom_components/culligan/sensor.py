@@ -21,7 +21,6 @@ import re
 from homeassistant.components.sensor import SensorDeviceClass, SensorEntity, SensorStateClass
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import (
-    FORMAT_DATETIME,
     PERCENTAGE,
     SIGNAL_STRENGTH_DECIBELS_MILLIWATT,
     EntityCategory,
@@ -33,6 +32,17 @@ from homeassistant.const import (
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.entity import generate_entity_id
+from homeassistant.util import dt as dt_util
+
+
+def _parse_device_datetime(value):
+    """Parse a device-reported datetime string into an aware datetime (device reports local time)."""
+    if not value:
+        return None
+    parsed = dt_util.parse_datetime(str(value))
+    if parsed is not None and parsed.tzinfo is None:
+        parsed = parsed.replace(tzinfo=dt_util.get_default_time_zone())
+    return parsed
 
 
 def _slugify_datapoint_id(datapoint_id: str) -> str:
@@ -128,7 +138,7 @@ async def async_setup_entry(
             "average daily water usage",
             UnitOfVolume.GALLONS,
             "mdi:cup-water",
-            SensorDeviceClass.WATER,
+            SensorDeviceClass.VOLUME_STORAGE,
             SensorStateClass.MEASUREMENT,
         ),
         (
@@ -182,14 +192,14 @@ async def async_setup_entry(
             "days since last regeneration",
             UnitOfTime.DAYS,
             "mdi:calendar-refresh",
-            SensorDeviceClass.DATE,
+            None,
             SensorStateClass.MEASUREMENT,
         ),
         (
             # exact date of last regeneration
             "last_regen_date_time",
             "last regeneration date",
-            FORMAT_DATETIME,
+            None,
             "mdi:calendar-check",
             SensorDeviceClass.TIMESTAMP,
             None,
@@ -313,7 +323,7 @@ async def async_setup_entry(
                 f"daily usage today - {day}d",
                 UnitOfVolume.GALLONS,
                 "mdi:cup-water",
-                SensorDeviceClass.WATER,
+                SensorDeviceClass.VOLUME_STORAGE,
                 SensorStateClass.MEASUREMENT,
             )]
         elif key[:3] == "avg" and key[-3:] in ["sun","mon","tue","wed","thr","fri","sat"]:
@@ -323,7 +333,7 @@ async def async_setup_entry(
                 f"average usage {day}",
                 UnitOfVolume.GALLONS,
                 "mdi:cup-water",
-                SensorDeviceClass.WATER,
+                SensorDeviceClass.VOLUME_STORAGE,
                 SensorStateClass.MEASUREMENT,
             )]
         elif key[:17] == "hourly_usage_hour":
@@ -333,7 +343,7 @@ async def async_setup_entry(
                 f"hourly usage now - {hour}h",
                 UnitOfVolume.GALLONS,
                 "mdi:cup-water",
-                SensorDeviceClass.WATER,
+                SensorDeviceClass.VOLUME_STORAGE,
                 SensorStateClass.MEASUREMENT,
             )]
         else:
@@ -544,6 +554,12 @@ class SoftenerSensor(CulliganBaseEntity, SensorEntity):
             else:
                 # LOGGER.debug("UNABLE TO GET FLOW_RATE")
                 return 0
+        elif self._attr_device_class == SensorDeviceClass.TIMESTAMP:
+            # device reports datetimes as local-time strings; HA requires aware datetime objects
+            return _parse_device_datetime(self.device.get_property_value(SENSOR_ID))
+        elif self._attr_device_class == SensorDeviceClass.DATE:
+            parsed = _parse_device_datetime(self.device.get_property_value(SENSOR_ID))
+            return parsed.date() if parsed else None
         else:
             LOGGER.debug(f"For {SENSOR_ID} got: {self.device.get_property_value(SENSOR_ID)}")
             return self.device.get_property_value(SENSOR_ID)
