@@ -137,6 +137,15 @@ class CulliganUpdateCoordinator(DataUpdateCoordinator[bool]):
 
         if isinstance(softener, CulliganIoTDevice):
             LOGGER.debug("updating culliganiot device")
+            if isinstance(softener, CulliganIoTSoftener):
+                try:
+                    # ask the device to publish fresh telemetry (what the mobile app does);
+                    # the push is asynchronous, so fresh data lands by the next poll cycle
+                    async with timeout(API_TIMEOUT):
+                        LOGGER.debug("sending telemetry.get command")
+                        await softener.async_get_telemetry()
+                except Exception:
+                    LOGGER.debug("telemetry.get command failed, reading cached cloud data")
             async with timeout(API_TIMEOUT):
                 try:
                     LOGGER.debug("starting async_update")
