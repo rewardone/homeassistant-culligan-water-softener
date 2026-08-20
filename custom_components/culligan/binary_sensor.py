@@ -138,21 +138,24 @@ class SoftenerBinarySensor(CulliganBaseEntity, BinarySensorEntity):
         # self.io_ayla                                        = isinstance(device, Device)
 
 
-    @property
-    def state(self) -> bool:
-        """Overwrite state instead of creating new entity class"""
-        #LOGGER.debug(f"For {self._attr_sensor_id} got {self.device.get_property_value(self._attr_sensor_id)}")
+    def _sensor_value(self):
+        """Return the source device value for this binary sensor."""
+        # LOGGER.debug(f"For {self._attr_sensor_id} got {self.device.get_property_value(self._attr_sensor_id)}")
         if self.io_culligan:
-            SENSOR_ID         = PROPERTY_VALUE_MAP[self._attr_sensor_id]
+            sensor_id = PROPERTY_VALUE_MAP[self._attr_sensor_id]
         else:
-            SENSOR_ID         = self._attr_sensor_id
+            sensor_id = self._attr_sensor_id
 
-        return bool(self.device.get_property_value(SENSOR_ID))
+        return self.device.get_property_value(sensor_id)
 
     @property
-    def is_on(self) -> bool:
-        """On based on state"""
-        return self.state
+    def is_on(self) -> bool | None:
+        """Return the binary sensor state using Home Assistant's BinarySensorEntity contract."""
+        value = self._sensor_value()
+        if value is None:
+            return None
+
+        return bool(value)
 
     @property
     def icon(self) -> str | None:
