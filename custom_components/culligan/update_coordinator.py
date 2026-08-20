@@ -12,11 +12,43 @@ from culligan.exc import CulliganAuthError, CulliganNotAuthedError, CulliganAuth
 from culligan.culliganiot_device import CulliganIoTDevice, CulliganIoTRO, CulliganIoTSoftener
 
 from datetime import datetime, timedelta
+from typing import Any
 
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import ConfigEntryAuthFailed
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
+
+
+async def async_fetch_registry_devices(culligan_api: CulliganApi) -> list[Any]:
+    """Fetch CulliganIoT device registry, re-signing in once if the server rejects the token.
+
+    The server can invalidate a token before its local expiry (e.g. mobile app sign-in),
+    in which case the proactive expiry-clock refresh never fires. Credentials are kept on
+    the CulliganApi instance, so a full re-sign-in recovers without user action.
+    """
+    try:
+        registry: Any = await culligan_api.async_get_device_registry()
+        return registry["data"]["devices"]
+    except (CulliganAuthError, CulliganNotAuthedError, CulliganAuthExpiringError):
+        LOGGER.info("Culligan token rejected by server, re-authenticating")
+        try:
+            await culligan_api.async_sign_in()
+            # devices hold a reference to the existing AylaApi object: refresh its tokens in place
+            if culligan_api.Ayla:
+                culligan_api.Ayla._set_credentials(
+                    200,
+                    {
+                        "access_token": culligan_api._ayla_access_token,
+                        "refresh_token": culligan_api._ayla_refresh_token,
+                        "expires_in": culligan_api._ayla_expiration_raw,
+                    },
+                )
+            registry = await culligan_api.async_get_device_registry()
+            return registry["data"]["devices"]
+        except (CulliganAuthError, CulliganNotAuthedError) as err:
+            # credentials genuinely invalid (password changed) — needs user action
+            raise ConfigEntryAuthFailed from err
 
 
 class CulliganUpdateCoordinator(DataUpdateCoordinator[bool]):
@@ -187,8 +219,8 @@ class CulliganUpdateCoordinator(DataUpdateCoordinator[bool]):
                 )
                 raise UpdateFailed(err) from err
 
-        # Add online devices from Culligan
-        all_online_devices += (await self.culligan_api.async_get_device_registry())["data"]["devices"]
+        # Add online devices from Culligan (re-signs in automatically on INVALID_TOKEN)
+        all_online_devices += await async_fetch_registry_devices(self.culligan_api)
 
         # self.culligan_devices is now only supported_devices as of 1.3.1, need another check here to not update 'online but not supported' devices
         temp = {}
