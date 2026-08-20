@@ -9,13 +9,15 @@
                     "username": "Username",
                     "password": "Password",
                     "region": "Region",
-                    "update_interval": "Update interval in seconds"
+                    "update_interval": "Update interval in seconds",
+                    "unit_system": "Units"
                 },
                 "data_description": {
                     "username": "Culligan email address.",
                     "password": "Culligan account password.",
                     "region": "Ayla uses different services in the EU.  Select your region to connect to the correct service for your account.",
-                    "update_interval": "Data update interval in seconds."
+                    "update_interval": "Data update interval in seconds.",
+                    "unit_system": "Display units for water usage and salt sensors."
                 }
             },
             "reauth": {
@@ -45,10 +47,12 @@
                 "title": "Manage options",
                 "description": "Manage or change settings.",
                 "data": {
-                    "update_interval": "Update interval in seconds"
+                    "update_interval": "Update interval in seconds",
+                    "unit_system": "Units"
                 },
                 "data_description": {
-                    "update_interval": "Data update interval in seconds."
+                    "update_interval": "Data update interval in seconds.",
+                    "unit_system": "Display units for water usage and salt sensors."
                 }
             }
         },
@@ -61,6 +65,12 @@
             "options": {
                 "europe": "Europe",
                 "elsewhere": "Everywhere Else"
+            }
+        },
+        "unit_system": {
+            "options": {
+                "imperial": "Imperial (gallons, pounds)",
+                "metric": "Metric (liters, kilograms)"
             }
         }
     }

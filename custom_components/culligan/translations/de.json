@@ -1,0 +1,77 @@
+{
+    "config": {
+        "flow_title": "Culligan-Konto hinzufügen",
+        "step": {
+            "user": {
+                "title": "Culligan-Konto anmelden",
+                "description": "Melden Sie sich bei Ihrem Culligan-Konto an, um auf Ihre Geräte zuzugreifen.",
+                "data": {
+                    "username": "Benutzername",
+                    "password": "Passwort",
+                    "region": "Region",
+                    "update_interval": "Aktualisierungsintervall in Sekunden",
+                    "unit_system": "Einheiten"
+                },
+                "data_description": {
+                    "username": "Culligan-E-Mail-Adresse.",
+                    "password": "Passwort des Culligan-Kontos.",
+                    "region": "Ayla verwendet in der EU andere Dienste. Wählen Sie Ihre Region, um sich mit dem richtigen Dienst zu verbinden.",
+                    "update_interval": "Intervall der Datenaktualisierung in Sekunden.",
+                    "unit_system": "Anzeigeeinheiten für Wasserverbrauchs- und Salzsensoren."
+                }
+            },
+            "reauth": {
+                "data": {
+                    "username": "Benutzername",
+                    "password": "Passwort",
+                    "region": "Region"
+                }
+            }
+        },
+        "error": {
+            "cannot_connect": "Verbindung nicht möglich.",
+            "invalid_auth": "Ungültige Anmeldedaten.",
+            "must_be_email": "Der Benutzername muss eine E-Mail-Adresse sein.",
+            "unknown": "Ein unbekannter Fehler ist aufgetreten."
+        },
+        "abort": {
+            "already_configured": "Konto bereits eingerichtet!",
+            "cannot_connect": "Verbindung nicht möglich.",
+            "reauth_successful": "Erneute Authentifizierung erfolgreich.",
+            "unknown": "Ein unbekannter Fehler ist aufgetreten."
+        }
+    },
+    "options": {
+        "step": {
+            "init": {
+                "title": "Optionen verwalten",
+                "description": "Einstellungen verwalten oder ändern.",
+                "data": {
+                    "update_interval": "Aktualisierungsintervall in Sekunden",
+                    "unit_system": "Einheiten"
+                },
+                "data_description": {
+                    "update_interval": "Intervall der Datenaktualisierung in Sekunden.",
+                    "unit_system": "Anzeigeeinheiten für Wasserverbrauchs- und Salzsensoren."
+                }
+            }
+        },
+        "error": {
+            "invalid": "Nicht unterstützt"
+        }
+    },
+    "selector": {
+        "region": {
+            "options": {
+                "europe": "Europa",
+                "elsewhere": "Rest der Welt"
+            }
+        },
+        "unit_system": {
+            "options": {
+                "imperial": "Imperial (Gallonen, Pfund)",
+                "metric": "Metrisch (Liter, Kilogramm)"
+            }
+        }
+    }
+}

@@ -25,9 +25,12 @@ from .const import (
     API_TIMEOUT,
     AYLA_REGION_DEFAULT,
     AYLA_REGION_OPTIONS,
+    CONF_UNIT_SYSTEM,
     CULLIGAN_APP_ID,
     DOMAIN,
     LOGGER,
+    UNIT_SYSTEM_IMPERIAL,
+    UNIT_SYSTEM_OPTIONS,
 )
 
 STEP_USER_DATA_SCHEMA = vol.Schema(
@@ -46,6 +49,11 @@ STEP_USER_DATA_SCHEMA = vol.Schema(
             ),
         ),
         vol.Optional("update_interval", default=30): cv.positive_int,
+        vol.Optional(CONF_UNIT_SYSTEM, default=UNIT_SYSTEM_IMPERIAL): selector.SelectSelector(
+            selector.SelectSelectorConfig(
+                options=UNIT_SYSTEM_OPTIONS, translation_key="unit_system"
+            ),
+        ),
     }
 )
 
@@ -268,8 +276,24 @@ class CulliganOptionsFlowHandler(config_entries.OptionsFlow):
             {
                 vol.Optional(
                     "update_interval",
-                    default=self.config_entry.data["user_input"]["update_interval"],
-                ): cv.positive_int
+                    default=self.config_entry.options.get(
+                        "update_interval",
+                        self.config_entry.data["user_input"]["update_interval"],
+                    ),
+                ): cv.positive_int,
+                vol.Optional(
+                    CONF_UNIT_SYSTEM,
+                    default=self.config_entry.options.get(
+                        CONF_UNIT_SYSTEM,
+                        self.config_entry.data["user_input"].get(
+                            CONF_UNIT_SYSTEM, UNIT_SYSTEM_IMPERIAL
+                        ),
+                    ),
+                ): selector.SelectSelector(
+                    selector.SelectSelectorConfig(
+                        options=UNIT_SYSTEM_OPTIONS, translation_key="unit_system"
+                    ),
+                ),
             }
         )
 

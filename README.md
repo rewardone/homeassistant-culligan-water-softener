@@ -16,7 +16,7 @@ It will create a number of sensors (refreshed every 5 seconds):
 - Water usage daily average - computed average by softener of daily usage
 - Available water - water available to use before next regeneration
 
-The units displayed are set in the application settings.
+Display units (imperial or metric) are chosen during setup and can be changed later in the integration options. Values reported by Culligan are in imperial units; Home Assistant converts them for display (gallons → liters, pounds → kilograms, gpm → L/min).
 
 ## Installation
 Copy the `custom_components/culligan_water_softener` folder into the config folder.
@@ -25,6 +25,11 @@ Copy the `custom_components/culligan_water_softener` folder into the config fold
 To add a Culligan water softener to Home assistant, go to Settings and click "+ ADD INTEGRATION" button. From list select "Culligan Water Softener" and click it, in displayed window you must enter:
 - Username - Culligan application username
 - Password - Culligan application password
+- Region - Europe or everywhere else (Ayla uses different servers in the EU)
+- Update interval - data refresh interval in seconds (default 30)
+- Units - Imperial (gallons, pounds) or Metric (liters, kilograms)
+
+The update interval and units can be changed later via the integration's "Configure" button.
 
 ## License
 [MIT](https://choosealicense.com/licenses/mit/)

@@ -1,0 +1,77 @@
+{
+    "config": {
+        "flow_title": "Añadir cuenta de Culligan",
+        "step": {
+            "user": {
+                "title": "Inicio de sesión de la cuenta Culligan",
+                "description": "Inicie sesión en su cuenta de Culligan para acceder a sus dispositivos.",
+                "data": {
+                    "username": "Nombre de usuario",
+                    "password": "Contraseña",
+                    "region": "Región",
+                    "update_interval": "Intervalo de actualización en segundos",
+                    "unit_system": "Unidades"
+                },
+                "data_description": {
+                    "username": "Dirección de correo electrónico de Culligan.",
+                    "password": "Contraseña de la cuenta de Culligan.",
+                    "region": "Ayla utiliza servicios diferentes en la UE. Seleccione su región para conectarse al servicio correcto.",
+                    "update_interval": "Intervalo de actualización de datos en segundos.",
+                    "unit_system": "Unidades de visualización para los sensores de consumo de agua y sal."
+                }
+            },
+            "reauth": {
+                "data": {
+                    "username": "Nombre de usuario",
+                    "password": "Contraseña",
+                    "region": "Región"
+                }
+            }
+        },
+        "error": {
+            "cannot_connect": "No se puede conectar.",
+            "invalid_auth": "Credenciales de autenticación no válidas.",
+            "must_be_email": "El nombre de usuario debe ser una dirección de correo electrónico.",
+            "unknown": "Ha ocurrido un error desconocido."
+        },
+        "abort": {
+            "already_configured": "¡La cuenta ya está configurada!",
+            "cannot_connect": "No se puede conectar.",
+            "reauth_successful": "Reautenticación correcta.",
+            "unknown": "Ha ocurrido un error desconocido."
+        }
+    },
+    "options": {
+        "step": {
+            "init": {
+                "title": "Gestionar opciones",
+                "description": "Gestionar o cambiar los ajustes.",
+                "data": {
+                    "update_interval": "Intervalo de actualización en segundos",
+                    "unit_system": "Unidades"
+                },
+                "data_description": {
+                    "update_interval": "Intervalo de actualización de datos en segundos.",
+                    "unit_system": "Unidades de visualización para los sensores de consumo de agua y sal."
+                }
+            }
+        },
+        "error": {
+            "invalid": "No compatible"
+        }
+    },
+    "selector": {
+        "region": {
+            "options": {
+                "europe": "Europa",
+                "elsewhere": "Resto del mundo"
+            }
+        },
+        "unit_system": {
+            "options": {
+                "imperial": "Imperial (galones, libras)",
+                "metric": "Métrico (litros, kilogramos)"
+            }
+        }
+    }
+}
