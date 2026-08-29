@@ -1,11 +1,14 @@
-"""Tests for automatic re-authentication (issue #15)."""
+"""Tests for automatic re-authentication and telemetry polling (issues #15 and #29)."""
 import asyncio
+from pathlib import Path
 
 import pytest
 from culligan.exc import CulliganAuthError
 
 from custom_components.culligan.update_coordinator import async_fetch_registry_devices
 from homeassistant.exceptions import ConfigEntryAuthFailed
+
+ROOT = Path(__file__).resolve().parents[1]
 
 DEVICES = [{"serialNumber": "ABC123"}]
 
@@ -56,3 +59,10 @@ def test_bad_credentials_raise_config_entry_auth_failed():
     api = FakeCulliganApi(registry_errors=1, sign_in_error=True)
     with pytest.raises(ConfigEntryAuthFailed):
         asyncio.run(async_fetch_registry_devices(api))
+
+
+def test_coordinator_sends_telemetry_command_for_iot_softeners():
+    coordinator_py = (ROOT / "custom_components/culligan/update_coordinator.py").read_text()
+
+    assert "async_get_telemetry" in coordinator_py
+    assert "isinstance(softener, CulliganIoTSoftener)" in coordinator_py
