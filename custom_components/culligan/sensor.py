@@ -77,7 +77,7 @@ def _get_datapoint_properties(device: CulliganIoTDevice) -> dict:
 def _datapoint_unique_suffix(datapoint_id: str) -> str:
     """Return a stable suffix that avoids collisions from slug normalization."""
     slug = _slugify_datapoint_id(datapoint_id) or "datapoint"
-    digest = hashlib.sha1(datapoint_id.encode("utf-8")).hexdigest()[:8]
+    digest = hashlib.sha1(datapoint_id.encode("utf-8"), usedforsecurity=False).hexdigest()[:8]
     return f"{slug}_{digest}"
 
 

@@ -2,7 +2,6 @@
 
 import aiohttp
 import asyncio
-import async_timeout
 from collections.abc import Mapping
 from culligan import CulliganApi, CulliganAuthError
 
@@ -97,7 +96,7 @@ async def validate_input(
     )
 
     try:
-        async with async_timeout.timeout(API_TIMEOUT):
+        async with asyncio.timeout(API_TIMEOUT):
             LOGGER.debug("Initialize connection to Ayla networks API")
             await culligan.async_sign_in()
             culligan.Ayla = culligan.get_ayla_api()
