@@ -3,7 +3,7 @@ from __future__ import annotations
 from .const import API_TIMEOUT, DOMAIN, LOGGER, PLATFORMS
 
 import asyncio
-from async_timeout import timeout
+from asyncio import timeout
 
 from ayla_iot_unofficial.device import Device, Softener
 from ayla_iot_unofficial import AylaAuthError, AylaNotAuthedError, AylaAuthExpiringError

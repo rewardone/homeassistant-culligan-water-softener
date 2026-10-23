@@ -11,7 +11,6 @@ from .const import (
 from .update_coordinator import CulliganUpdateCoordinator
 
 import asyncio
-import async_timeout
 
 from ayla_iot_unofficial.device import Softener
 from culligan.culliganiot_device import CulliganIoTRO, CulliganIoTSoftener
@@ -188,7 +187,7 @@ async def async_connect_or_timeout(culligan: CulliganApi) -> bool:
     """Connect to Ayla."""
     LOGGER.debug("async_connect_or_timeout")
     try:
-        async with async_timeout.timeout(API_TIMEOUT):
+        async with asyncio.timeout(API_TIMEOUT):
             LOGGER.debug("Signing into Culligan")
             await culligan.async_sign_in()
 
@@ -207,7 +206,7 @@ async def async_connect_or_timeout(culligan: CulliganApi) -> bool:
 async def async_disconnect_or_timeout(coordinator: CulliganUpdateCoordinator):
     """Disconnect - Invalidate Access Token"""
     LOGGER.debug("Disconnecting from Ayla Api")
-    async with async_timeout.timeout(API_TIMEOUT):
+    async with asyncio.timeout(API_TIMEOUT):
         with suppress(
             CulliganAuthError, CulliganAuthExpiringError, CulliganNotAuthedError
         ):
